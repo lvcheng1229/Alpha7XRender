@@ -11,15 +11,64 @@
 #include <string>
 #include <string_view>
 #include <optional>
-
+#include "paramdict.h"
 
 namespace pbrt {
 
 	// ParserTarget Definition
 	class ParserTarget {
 	public:
+        // ParserTarget Interface
+        virtual void Scale(float sx, float sy, float sz) = 0;
 
-		virtual void EndOfFiles() = 0;
+        virtual void Shape(const std::string& name, ParsedParameterVector params) = 0;
+
+        virtual ~ParserTarget() {};
+
+        virtual void Option(const std::string& name, const std::string& value) = 0;
+
+        virtual void Identity() = 0;
+        virtual void Translate(float dx, float dy, float dz) = 0;
+        virtual void Rotate(float angle, float ax, float ay, float az) = 0;
+        virtual void LookAt(float ex, float ey, float ez, float lx, float ly, float lz,
+            float ux, float uy, float uz) = 0;
+        virtual void ConcatTransform(float transform[16]) = 0;
+        virtual void Transform(float transform[16]) = 0;
+        virtual void CoordinateSystem(const std::string&) = 0;
+        virtual void CoordSysTransform(const std::string&) = 0;
+        virtual void ActiveTransformAll() = 0;
+        virtual void ActiveTransformEndTime() = 0;
+        virtual void ActiveTransformStartTime() = 0;
+        virtual void TransformTimes(float start, float end) = 0;
+
+        virtual void ColorSpace(const std::string& n) = 0;
+        virtual void PixelFilter(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void Film(const std::string& type, ParsedParameterVector params) = 0;
+        virtual void Accelerator(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void Integrator(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void Camera(const std::string&, ParsedParameterVector params) = 0;
+        virtual void MakeNamedMedium(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void MediumInterface(const std::string& insideName,  const std::string& outsideName) = 0;
+        virtual void Sampler(const std::string& name, ParsedParameterVector params) = 0;
+
+        virtual void WorldBegin() = 0;
+        virtual void AttributeBegin() = 0;
+        virtual void AttributeEnd() = 0;
+        virtual void Attribute(const std::string& target, ParsedParameterVector params) = 0;
+        virtual void Texture(const std::string& name, const std::string& type,
+            const std::string& texname, ParsedParameterVector params) = 0;
+        virtual void Material(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void MakeNamedMaterial(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void NamedMaterial(const std::string& name) = 0;
+        virtual void LightSource(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void AreaLightSource(const std::string& name, ParsedParameterVector params) = 0;
+        virtual void ReverseOrientation() = 0;
+        virtual void ObjectBegin(const std::string& name) = 0;
+        virtual void ObjectEnd() = 0;
+        virtual void ObjectInstance(const std::string& name) = 0;
+
+        virtual void EndOfFiles() = 0;
+
 	protected:
 	};
 

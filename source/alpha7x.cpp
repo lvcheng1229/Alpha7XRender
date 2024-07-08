@@ -1,6 +1,36 @@
 #include "cxxopts.hpp"
 #include "pbrt_parser/parser.h"
 #include "scene.h"
+
+#include <embree4/rtcore.h>
+#include <stdio.h>
+#include <math.h>
+#include <limits>
+#include <stdio.h>
+
+#if defined(_WIN32)
+#  include <conio.h>
+#  include <windows.h>
+#endif
+
+void errorFunction(void* userPtr, enum RTCError error, const char* str)
+{
+	printf("error %d: %s\n", error, str);
+}
+
+RTCDevice initializeDevice()
+{
+	RTCDevice device = rtcNewDevice(NULL);
+
+	if (!device)
+		printf("error %d: cannot create device\n", rtcGetDeviceError(NULL));
+
+	rtcSetDeviceErrorFunction(device, errorFunction, NULL);
+	return device;
+}
+
+
+
 int main(int argc, char* argv[])
 {
 	cxxopts::Options opts("Alpha7XRender", "Tiny Offline Renderer");
@@ -21,5 +51,12 @@ int main(int argc, char* argv[])
 	std::string input_pbrt_scene_path = opt_result["i"].as<std::string>();
 	Alpha7XSceneBuilder builder;
 	pbrt::ParseFile(&builder, input_pbrt_scene_path);
+
+
+	{
+		RTCDevice rt_device = initializeDevice();
+		RTCScene rt_scene = rtcNewScene(rt_device);
+	}
+
 	return 0;
 }

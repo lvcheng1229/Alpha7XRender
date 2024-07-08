@@ -3,7 +3,7 @@
 // SPDX: Apache-2.0
 
 #include "parser.h"
-#include "paramdict.h"
+
 #include <fstream>
 #include <assert.h>
 #include <format>
@@ -508,6 +508,262 @@ namespace pbrt
                 });
             (target->*apiFunc)(n, std::move(parameterVector));
             };
+
+        auto syntaxError = [&](const Token& t) {
+            printf("Unknown directive: %s", toString(t.token).c_str());
+            };
+
+        std::optional<Token> tok;
+
+        while (true) {
+            tok = nextToken(TokenOptional);
+            if (!tok.has_value())
+                break;
+
+            switch (tok->token[0]) {
+            case 'A':
+                if (tok->token == "AttributeBegin")
+                    target->AttributeBegin();
+                else if (tok->token == "AttributeEnd")
+                    target->AttributeEnd();
+                else if (tok->token == "Attribute")
+                    basicParamListEntrypoint(&ParserTarget::Attribute);
+                else if (tok->token == "ActiveTransform") {
+                    Token a = *nextToken(TokenRequired);
+                    if (a.token == "All")
+                        target->ActiveTransformAll();
+                    else if (a.token == "EndTime")
+                        target->ActiveTransformEndTime();
+                    else if (a.token == "StartTime")
+                        target->ActiveTransformStartTime();
+                    else
+                        syntaxError(*tok);
+                }
+                else if (tok->token == "AreaLightSource")
+                    basicParamListEntrypoint(&ParserTarget::AreaLightSource);
+                else if (tok->token == "Accelerator")
+                    basicParamListEntrypoint(&ParserTarget::Accelerator);
+                else
+                    syntaxError(*tok);
+                break;
+            case 'C':
+                if (tok->token == "ConcatTransform") {
+                    if (nextToken(TokenRequired)->token != "[")
+                        syntaxError(*tok);
+                    float m[16];
+                    for (int i = 0; i < 16; ++i)
+                        m[i] = parseFloat(*nextToken(TokenRequired));
+                    if (nextToken(TokenRequired)->token != "]")
+                        syntaxError(*tok);
+                    target->ConcatTransform(m);
+                }
+                else if (tok->token == "CoordinateSystem") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    target->CoordinateSystem(toString(n));
+                }
+                else if (tok->token == "CoordSysTransform") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    target->CoordSysTransform(toString(n));
+                }
+                else if (tok->token == "ColorSpace") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    target->ColorSpace(toString(n));
+                }
+                else if (tok->token == "Camera")
+                    basicParamListEntrypoint(&ParserTarget::Camera);
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'F':
+                if (tok->token == "Film")
+                    basicParamListEntrypoint(&ParserTarget::Film);
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'I':
+                if (tok->token == "Integrator")
+                    basicParamListEntrypoint(&ParserTarget::Integrator);
+                else if (tok->token == "Identity")
+                    target->Identity();
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'L':
+                if (tok->token == "LightSource")
+                    basicParamListEntrypoint(&ParserTarget::LightSource);
+                else if (tok->token == "LookAt") {
+                    float v[9];
+                    for (int i = 0; i < 9; ++i)
+                        v[i] = parseFloat(*nextToken(TokenRequired));
+                    target->LookAt(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]);
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'M':
+                if (tok->token == "MakeNamedMaterial")
+                    basicParamListEntrypoint(&ParserTarget::MakeNamedMaterial);
+                else if (tok->token == "MakeNamedMedium")
+                    basicParamListEntrypoint(&ParserTarget::MakeNamedMedium);
+                else if (tok->token == "Material")
+                    basicParamListEntrypoint(&ParserTarget::Material);
+                else if (tok->token == "MediumInterface") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    std::string names[2];
+                    names[0] = toString(n);
+
+                    // Check for optional second parameter
+                    std::optional<Token> second = nextToken(TokenOptional);
+                    if (second.has_value()) {
+                        if (isQuotedString(second->token))
+                            names[1] = toString(dequoteString(*second));
+                        else {
+                            unget(*second);
+                            names[1] = names[0];
+                        }
+                    }
+                    else
+                        names[1] = names[0];
+
+                    target->MediumInterface(names[0], names[1]);
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'N':
+                if (tok->token == "NamedMaterial") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    target->NamedMaterial(toString(n));
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'O':
+                if (tok->token == "ObjectBegin") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    target->ObjectBegin(toString(n));
+                }
+                else if (tok->token == "ObjectEnd")
+                    target->ObjectEnd();
+                else if (tok->token == "ObjectInstance") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    target->ObjectInstance(toString(n));
+                }
+                else if (tok->token == "Option") {
+                    std::string name = toString(dequoteString(*nextToken(TokenRequired)));
+                    std::string value = toString(nextToken(TokenRequired)->token);
+                    target->Option(name, value);
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'P':
+                if (tok->token == "PixelFilter")
+                    basicParamListEntrypoint(&ParserTarget::PixelFilter);
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'R':
+                if (tok->token == "ReverseOrientation")
+                    target->ReverseOrientation();
+                else if (tok->token == "Rotate") {
+                    float v[4];
+                    for (int i = 0; i < 4; ++i)
+                        v[i] = parseFloat(*nextToken(TokenRequired));
+                    target->Rotate(v[0], v[1], v[2], v[3]);
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'S':
+                if (tok->token == "Shape")
+                    basicParamListEntrypoint(&ParserTarget::Shape);
+                else if (tok->token == "Sampler")
+                    basicParamListEntrypoint(&ParserTarget::Sampler);
+                else if (tok->token == "Scale") {
+                    float v[3];
+                    for (int i = 0; i < 3; ++i)
+                        v[i] = parseFloat(*nextToken(TokenRequired));
+                    target->Scale(v[0], v[1], v[2]);
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'T':
+                if (tok->token == "TransformBegin") {
+                    target->AttributeBegin();
+                }
+                else if (tok->token == "TransformEnd") {
+                    target->AttributeEnd();
+                }
+                else if (tok->token == "Transform") {
+                    if (nextToken(TokenRequired)->token != "[")
+                        syntaxError(*tok);
+                    float m[16];
+                    for (int i = 0; i < 16; ++i)
+                        m[i] = parseFloat(*nextToken(TokenRequired));
+                    if (nextToken(TokenRequired)->token != "]")
+                        syntaxError(*tok);
+                    target->Transform(m);
+                }
+                else if (tok->token == "Translate") {
+                    float v[3];
+                    for (int i = 0; i < 3; ++i)
+                        v[i] = parseFloat(*nextToken(TokenRequired));
+                    target->Translate(v[0], v[1], v[2]);
+                }
+                else if (tok->token == "TransformTimes") {
+                    float v[2];
+                    for (int i = 0; i < 2; ++i)
+                        v[i] = parseFloat(*nextToken(TokenRequired));
+                    target->TransformTimes(v[0], v[1]);
+                }
+                else if (tok->token == "Texture") {
+                    std::string_view n = dequoteString(*nextToken(TokenRequired));
+                    std::string name = toString(n);
+                    n = dequoteString(*nextToken(TokenRequired));
+                    std::string type = toString(n);
+
+                    Token t = *nextToken(TokenRequired);
+                    std::string_view dequoted = dequoteString(t);
+                    std::string texName = toString(dequoted);
+                    ParsedParameterVector params = parseParameters(
+                        nextToken, unget, formatting, [&](const Token& t, const char* msg) {
+                            std::string token = toString(t.token);
+                            std::string str = std::format("%s: %s", token, msg);
+                            printf(str.c_str());
+                        });
+
+                    target->Texture(name, type, texName, std::move(params));
+                }
+                else
+                    syntaxError(*tok);
+                break;
+
+            case 'W':
+                if (tok->token == "WorldBegin")
+                    target->WorldBegin();
+                else if (tok->token == "WorldEnd" && formatting)
+                    ;  // just swallow it
+                else
+                    syntaxError(*tok);
+                break;
+
+            default:
+                syntaxError(*tok);
+            };
+                    
+        };
     }
 
     void ParseFile(ParserTarget* target, const std::string& filename)

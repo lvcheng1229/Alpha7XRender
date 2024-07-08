@@ -1,15 +1,15 @@
-Integrator "sppm"
-    "integer maxdepth" [ 8 ]
+Integrator "path"
+    "integer maxdepth" [ 65 ]
 Transform [ 1 -0 -0 -0 -0 1 -0 -0 -0 -0 -1 -0 -0 -1 6.8 1  ]
 Sampler "sobol"
-    "integer pixelsamples" [ 32 ]
+    "integer pixelsamples" [ 64 ]
 PixelFilter "triangle"
     "float xradius" [ 1 ]
     "float yradius" [ 1 ]
 Film "rgb"
     "string filename" [ "cornell-box.png" ]
-    "integer yresolution" [ 256 ]
-    "integer xresolution" [ 256 ]
+    "integer yresolution" [ 1024 ]
+    "integer xresolution" [ 1024 ]
 Camera "perspective"
     "float fov" [ 19.5 ]
 
