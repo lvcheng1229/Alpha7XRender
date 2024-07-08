@@ -11,15 +11,30 @@ set(PROJECT_LIBRARY_DLL_DIR ${DALPHA7X_ROOT_DIR}/thirdparty/embree/dll)
 
 project(AlphaX7Renderer VERSION 0.1.0)
 
+
 # source file
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.h")
+file(GLOB_RECURSE HPP_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.hpp")
 file(GLOB_RECURSE SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Source" FILES ${HEADER_FILES} ${SOURCE_FILES} ${CUH_FILES} ${CU_FILES})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Source" FILES ${HEADER_FILES} ${SOURCE_FILES} ${HPP_FILES})
+
+# add thirdparty
+add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
+
+set (ALL_PBRT_LIBS
+  double-conversion
+)
+
+# link thirdparty libs
+include_directories (${DOUBLE_CONVERSION_INCLUDE})
+link_libraries (${ALL_PBRT_LIBS})
 
 include_directories(${DALPHA7X_ROOT_DIR}/source)
 
 # include embree headers
 include_directories(${DALPHA7X_ROOT_DIR}/thirdparty/embree/include)
+include_directories(${DOUBLE_CONVERSION_INCLUDE})
+
 
 # thirdparty
 # include_directories(${FGAC_ROOT_DIR}/thirdparty/stb)
