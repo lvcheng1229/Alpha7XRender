@@ -56,6 +56,8 @@ int main(int argc, char* argv[])
 	{
 		RTCDevice rt_device = initializeDevice();
 		RTCScene rt_scene = rtcNewScene(rt_device);
+
+
 	}
 
 	return 0;

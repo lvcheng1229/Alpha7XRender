@@ -1,6 +1,14 @@
 #pragma once
 #include "pbrt_parser/parser.h"
 #include "pbrt_parser/paramdict.h"
+#include "film.h"
+
+class CAlpa7XScene
+{
+public:
+private:
+    CRGBFilm rgb_film;
+};
 
 class Alpha7XSceneBuilder : public pbrt::ParserTarget
 {
