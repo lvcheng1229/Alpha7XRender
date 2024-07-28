@@ -1,6 +1,7 @@
 #include "cxxopts.hpp"
 #include "pbrt_parser/parser.h"
 #include "scene.h"
+#include "render.h"
 
 #include <embree4/rtcore.h>
 #include <stdio.h>
@@ -49,15 +50,16 @@ int main(int argc, char* argv[])
 	}
 
 	std::string input_pbrt_scene_path = opt_result["i"].as<std::string>();
-	Alpha7XSceneBuilder builder;
+	
+	CAlpa7XScene scene;
+	Alpha7XSceneBuilder builder(&scene);
 	pbrt::ParseFile(&builder, input_pbrt_scene_path);
 
 
 	{
 		RTCDevice rt_device = initializeDevice();
 		RTCScene rt_scene = rtcNewScene(rt_device);
-
-
+		renderScene(scene);
 	}
 
 	return 0;

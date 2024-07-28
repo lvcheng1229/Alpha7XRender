@@ -478,7 +478,7 @@ namespace pbrt
             std::optional<Token> tok = fileTokenizer->Next();
 
             if (!tok) {
-                assert(false);
+                return std::optional<Token>();
             }
             else if (tok->token[0] == '#') {
                 return nextToken(flags);

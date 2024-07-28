@@ -33,7 +33,7 @@ namespace pbrt {
         virtual void LookAt(float ex, float ey, float ez, float lx, float ly, float lz,
             float ux, float uy, float uz) = 0;
         virtual void ConcatTransform(float transform[16]) = 0;
-        virtual void Transform(float transform[16]) = 0;
+        virtual void Transform(float* transform) = 0;
         virtual void CoordinateSystem(const std::string&) = 0;
         virtual void CoordSysTransform(const std::string&) = 0;
         virtual void ActiveTransformAll() = 0;
