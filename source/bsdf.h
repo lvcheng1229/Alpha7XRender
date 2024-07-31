@@ -6,6 +6,11 @@
 class CBSDF
 {
 public:
+	CBSDF() :normal(glm::vec3(0, 0, 0)) {};
+	CBSDF(glm::vec3 ipt_normal, std::shared_ptr<CBxDF> ipt_bxdf)
+		:normal(ipt_normal)
+		, bxdf(ipt_bxdf) {};
+
 	glm::vec3 f(glm::vec3 wo, glm::vec3 wi)const
 	{
 		assert(false);
@@ -24,5 +29,5 @@ public:
 
 private:
 	glm::vec3 normal;
-	CBxDF* bxdf;
+	std::shared_ptr<CBxDF> bxdf;
 };

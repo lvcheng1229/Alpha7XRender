@@ -5,21 +5,24 @@
 #include "lightsampler.h"
 #include "interaction.h"
 #include "bsdf.h"
-#include "shapes.h"
+#include "geometry.h"
 
 class CIntegrator
 {
 public:
+	CIntegrator(CAccelerator* ipt_accelerator)
+		:accelerator(ipt_accelerator) {};
+
 	virtual void render() = 0;
-	SShapeInteraction intersect(CRay ray, float t_max = std::numeric_limits<float>::max())const;
+	SShapeInteraction intersect(CRay ray)const;
 private:
-	
+	CAccelerator* accelerator;
 };
 
 class CPathIntegrator : public CIntegrator
 {
 public:
-	CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, std::vector<CLight*> lights);
+	CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<CLight*> lights);
 
 	void render();
 private:
@@ -32,5 +35,6 @@ private:
 	CLightSampler* light_sampler;
 	CPerspectiveCamera* camera;
 	CSampler* sampler_prototype;
+	
 };
 

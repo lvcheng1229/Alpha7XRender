@@ -88,7 +88,9 @@ namespace pbrt {
         std::vector< glm::vec3> GetNormal3fArray(const std::string& name) const;
         std::vector<std::string> GetStringArray(const std::string& name) const;
 
+        inline ParsedParameterVector& getParameters() { return params; }
     private:
+
         // ParameterDictionary Private Methods
         template <ParameterType PT>
         typename ParameterTypeTraits<PT>::ReturnType lookupSingle(

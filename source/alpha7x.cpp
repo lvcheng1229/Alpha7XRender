@@ -14,23 +14,6 @@
 #  include <windows.h>
 #endif
 
-void errorFunction(void* userPtr, enum RTCError error, const char* str)
-{
-	printf("error %d: %s\n", error, str);
-}
-
-RTCDevice initializeDevice()
-{
-	RTCDevice device = rtcNewDevice(NULL);
-
-	if (!device)
-		printf("error %d: cannot create device\n", rtcGetDeviceError(NULL));
-
-	rtcSetDeviceErrorFunction(device, errorFunction, NULL);
-	return device;
-}
-
-
 
 int main(int argc, char* argv[])
 {
@@ -55,10 +38,7 @@ int main(int argc, char* argv[])
 	Alpha7XSceneBuilder builder(&scene);
 	pbrt::ParseFile(&builder, input_pbrt_scene_path);
 
-
 	{
-		RTCDevice rt_device = initializeDevice();
-		RTCScene rt_scene = rtcNewScene(rt_device);
 		renderScene(scene);
 	}
 

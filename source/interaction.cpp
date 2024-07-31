@@ -7,7 +7,6 @@ CBSDF CSurfaceInterraction::getBSDF()
         return CBSDF();
     }
 
-
-
-    return CBSDF();
+    CBSDF bsdf = CBSDF(norm, material->getBxdf());
+    return bsdf;
 }

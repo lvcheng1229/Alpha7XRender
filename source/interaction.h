@@ -4,11 +4,18 @@
 #include "material.h"
 #include "bsdf.h"
 
-class CSurfaceInterraction
+class CInteraction
 {
 public:
+	glm::vec3 position;
 	glm::vec3 norm;
 	glm::vec3 wo;
+};
+
+class CSurfaceInterraction :public CInteraction
+{
+public:
+
 	CMaterial* material;
 
 	inline CRay spawnRay(glm::vec3 direction)

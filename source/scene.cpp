@@ -1,3 +1,4 @@
+#include <iterator>
 #include "scene.h"
 
 void Alpha7XSceneBuilder::Scale(float sx, float sy, float sz)
@@ -6,6 +7,16 @@ void Alpha7XSceneBuilder::Scale(float sx, float sy, float sz)
 
 void Alpha7XSceneBuilder::Shape(const std::string& name, pbrt::ParsedParameterVector params)
 {
+	pbrt::ParameterDictionary dict(std::move(params));
+
+	int areaLightIndex = -1;
+	if (!graphics_state.area_light_name.empty())
+	{
+		assert(false);
+	}
+
+	SShapeSceneEntity shape_entity(name, dict, graphics_state.material_name);
+	shapes.push_back(std::move(shape_entity));
 }
 
 Alpha7XSceneBuilder::Alpha7XSceneBuilder(CAlpa7XScene* scene)
@@ -140,10 +151,13 @@ void Alpha7XSceneBuilder::Material(const std::string& name, pbrt::ParsedParamete
 
 void Alpha7XSceneBuilder::MakeNamedMaterial(const std::string& name, pbrt::ParsedParameterVector params)
 {
+	pbrt::ParameterDictionary dict(std::move(params));
+	scene->named_materials.push_back(std::pair<std::string,SSceneEntity>(name, SSceneEntity(name, dict)));
 }
 
 void Alpha7XSceneBuilder::NamedMaterial(const std::string& name)
 {
+	graphics_state.material_name = name;
 }
 
 void Alpha7XSceneBuilder::LightSource(const std::string& name, pbrt::ParsedParameterVector params)
@@ -172,6 +186,10 @@ void Alpha7XSceneBuilder::ObjectInstance(const std::string& name)
 
 void Alpha7XSceneBuilder::EndOfFiles()
 {
+	if (!shapes.empty())
+	{
+		std::move(std::begin(shapes), std::end(shapes), std::back_inserter(scene->shapes));
+	}
 }
 
 CAlpa7XScene::~CAlpa7XScene()
@@ -179,20 +197,21 @@ CAlpa7XScene::~CAlpa7XScene()
 	delete camera;
 	delete sampler;
 	delete rgb_film;
+	delete accelerator;
 }
 
-std::unique_ptr<CIntegrator> CAlpa7XScene::createIntegrator(CPerspectiveCamera* camera, CSampler* sampler, std::vector<CLight*> lights)
+std::unique_ptr<CIntegrator> CAlpa7XScene::createIntegrator(CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_scene_inter_cpt, std::vector<CLight*> lights)
 {
 	if (integrators.name == "path")
 	{
 		int max_depth = integrators.parameters.GetOneInt("maxdepth", 5);
-		return std::make_unique<CPathIntegrator>(max_depth, camera, sampler, lights);
+		return std::make_unique<CPathIntegrator>(max_depth, camera, sampler, ipt_scene_inter_cpt, lights);
 	}
 	else
 	{
 		assert(false);
 	}
-	return std::unique_ptr<CIntegrator>();
+	return std::unique_ptr<CIntegrator>(nullptr);
 }
 
 void CAlpa7XScene::SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SCameraSceneEntity ipt_camera, SSceneEntity ipt_sampler, SSceneEntity ipt_integrator, SSceneEntity ipt_accelerator)
@@ -215,4 +234,64 @@ void CAlpa7XScene::SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SC
 	{
 		assert(false);
 	}
+}
+
+CAccelerator* CAlpa7XScene::createAccelerator()
+{
+	if (accelerator == nullptr)
+	{
+		accelerator = new CAccelerator();
+		for (int mat_idx = 0; mat_idx < named_materials.size(); mat_idx++)
+		{
+			SSceneEntity& scene_entity = named_materials[mat_idx].second;
+			
+			CMaterial* new_material = nullptr;
+			std::string material_type = scene_entity.parameters.GetOneString("type", "");
+			if (material_type == "diffuse")
+			{
+				for (const pbrt::ParsedParameter* p : scene_entity.parameters.getParameters())
+				{
+					if (p->name == "reflectance" && p->type == "rgb")
+					{
+						new_material = new CDiffuseMaterial(glm::vec3(p->floats[0], p->floats[1], p->floats[2]));
+					}
+				}
+			}
+			else
+			{
+				assert(false);
+			}
+			accelerator->scene_materials.push_back(new_material);
+			accelerator->mat_name_idx_map.insert(std::pair(named_materials[mat_idx].first, mat_idx));
+		}
+
+		for (int shape_idx = 0; shape_idx < shapes.size(); shape_idx++)
+		{
+			SShapeSceneEntity& shape_entity = shapes[shape_idx];
+			CLight* area_light = nullptr;
+			if (area_light == nullptr)
+			{
+				auto mat_map_iter = accelerator->mat_name_idx_map.find(shape_entity.material_name);
+				if (mat_map_iter != accelerator->mat_name_idx_map.end())
+				{
+					SA7XGeometry scene_geometry;
+					scene_geometry.geometry = accelerator->createRTCGeometry(&shape_entity, shape_idx);
+					scene_geometry.material_idx = mat_map_iter->second;
+					accelerator->scene_geometries.push_back(scene_geometry);
+				}
+				else
+				{
+					assert(false);
+				}
+
+			}
+			else
+			{
+				assert(false);
+			}
+		}
+		accelerator->finalizeRtSceneCreate();
+	}
+	
+	return accelerator;
 }

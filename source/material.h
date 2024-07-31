@@ -1,19 +1,25 @@
 #pragma once
+#include <memory>
 #include "bxdf.h"
+
 
 class CMaterial
 {
 public:
+	inline std::shared_ptr<CBxDF> getBxdf() { return bxdf; }
+protected:
+	std::shared_ptr<CBxDF> bxdf;
 };
 
 class CDiffuseMaterial : public CMaterial
 {
 public:
-
-	CDiffuseBxDF getBxDF()
+	CDiffuseMaterial(glm::vec3 reflectance)
+		:reflectance(reflectance) 
 	{
-		return CDiffuseBxDF(reflectance);
-	}
+		bxdf = std::make_shared<CDiffuseBxDF>(reflectance);
+	};
+
 private:
 	glm::vec3 reflectance;
 };

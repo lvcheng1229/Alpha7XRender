@@ -28,24 +28,44 @@ struct SCameraSceneEntity : public SSceneEntity
     glm::mat4x4 camera_trans_mat;
 };
 
+struct SShapeSceneEntity : public SSceneEntity
+{
+    SShapeSceneEntity() = default;
+    SShapeSceneEntity(const std::string& name, pbrt::ParameterDictionary parameters, const std::string& ipt_material_name)
+        :SSceneEntity(name, parameters)
+        , material_name(ipt_material_name) {};
+
+    std::string material_name;
+
+};
+
 class CAlpa7XScene
 {
 public:
+    CAlpa7XScene()
+        : camera(nullptr)
+        , sampler(nullptr)
+        , rgb_film(nullptr)
+        , accelerator(nullptr) {};
+
     ~CAlpa7XScene();
 
-    std::unique_ptr<CIntegrator> createIntegrator(CPerspectiveCamera* camera,CSampler* sampler,std::vector<CLight*> lights);
+    std::unique_ptr<CIntegrator> createIntegrator(CPerspectiveCamera* camera,CSampler* sampler, CAccelerator* ipt_scene_inter_cpt, std::vector<CLight*> lights);
 
     void SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SCameraSceneEntity ipt_camera, SSceneEntity ipt_sampler, SSceneEntity ipt_integrator, SSceneEntity ipt_accelerator);
 
     inline CPerspectiveCamera* getCamera() { return camera; }
     inline CSampler* getSampler() { return sampler; }
-
-    SSceneEntity integrators;
+    CAccelerator* createAccelerator();
 
     CPerspectiveCamera* camera;
     CSampler* sampler;
     CRGBFilm* rgb_film;
-
+    CAccelerator* accelerator;
+    
+    SSceneEntity integrators;
+    std::vector<SShapeSceneEntity> shapes;
+    std::vector<std::pair<std::string, SSceneEntity>> named_materials;
 private:
 };
 
@@ -109,10 +129,12 @@ private:
     struct SGraphicsState
     {
         glm::mat4x4 transform;
+        std::string area_light_name;
+        std::string material_name;
     };
     SGraphicsState graphics_state;
     std::vector<SGraphicsState> pushed_graphics_states;
-
+    std::vector<SShapeSceneEntity> shapes;
 
     CAlpa7XScene* scene;
 

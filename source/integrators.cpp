@@ -1,16 +1,16 @@
 #include "integrators.h"
 #include "parallel.h"
-#include "shapes.h"
 #include "sampling.h"
 
-SShapeInteraction CIntegrator::intersect(CRay ray, float t_max) const
+SShapeInteraction CIntegrator::intersect(CRay ray) const
 {
-	return SShapeInteraction();
+	return accelerator->intersection(ray);
 }
 
 
-CPathIntegrator::CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, std::vector<CLight*> lights)
-	:max_depth(max_depth)
+CPathIntegrator::CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<CLight*> lights)
+	: CIntegrator(ipt_accelerator)
+	, max_depth(max_depth)
 	, camera(camera)
 	, sampler_prototype(sampler)
 {
@@ -79,8 +79,6 @@ glm::vec3 CPathIntegrator::Li(CRay ray, CSampler* sampler)
 			break;
 		}
 
-		
-
 		// if no specular surface
 		// sample direct illumination
 		glm::vec3 radiance_direct = SampleLd(sf_interaction, &bsdf, sampler);
@@ -125,17 +123,18 @@ glm::vec3 CPathIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, 
 {
 	glm::vec3 radiance;
 
-	CLightSampleContext sample_ctx;
+	CLightSampleContext sample_ctx(sf_interaction);
 
 	float u = sampler->get1D();
-	CLight* sampled_light = light_sampler->Sample(u);
-	if (!sampled_light)
+	SSampledLight sampled_light = light_sampler->Sample(u);
+	CLight* light = sampled_light.light;
+	if (!light)
 	{
 		return glm::vec3(0, 0, 0);
 	}
 
 	glm::vec2 u_light = sampler->get2D();
-	SLightSample light_sample = sampled_light->SampleLi(sample_ctx, u_light);
+	SLightSample light_sample = light->SampleLi(sample_ctx, u_light);
 	// if (xxx)
 
 	glm::vec3 wo = sf_interaction.wo;
@@ -144,7 +143,7 @@ glm::vec3 CPathIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, 
 
 	// if unoccluded
 
-	float p_light = sampled_light->p* light_sample.pdf;
+	float p_light = sampled_light.pmf* light_sample.pdf;
 	// if is delta light
 	// else
 
