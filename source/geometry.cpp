@@ -76,6 +76,30 @@ SShapeInteraction CAccelerator::intersection(CRay ray)
 	return shape_interaction;
 }
 
+bool CAccelerator::traceVisibilityRay(CRay ray, float max_t)
+{
+	RTCOccludedArguments sargs;
+	rtcInitOccludedArguments(&sargs);
+
+	RTCRay visibility_ray;
+	visibility_ray.org_x = ray.origin.x;
+	visibility_ray.org_y = ray.origin.y;
+	visibility_ray.org_z = ray.origin.z;
+	visibility_ray.dir_x = ray.direction.x;
+	visibility_ray.dir_y = ray.direction.y;
+	visibility_ray.dir_z = ray.direction.z;
+	visibility_ray.tnear = 0;
+	visibility_ray.tfar = max_t;
+	visibility_ray.time = 0;
+	visibility_ray.mask = -1;
+	rtcOccluded1(rt_scene, &visibility_ray, &sargs);
+	if (visibility_ray.tfar > 0.0)
+	{
+		return true;
+	}
+	return false;
+}
+
 RTCGeometry CAccelerator::createRTCGeometry(SShapeSceneEntity* shape_entity, int ID)
 {
 	if (shape_entity->name == "trianglemesh")

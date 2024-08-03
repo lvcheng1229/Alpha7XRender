@@ -8,7 +8,7 @@ CPowerLightSampler::CPowerLightSampler(std::vector<CLight*> input_lights)
 	for (int idx = 0; idx < lights.size(); idx++)
 	{
 		lights[idx] = input_lights[idx];
-		light_cdf[idx] = (lights[idx]->L.x + lights[idx]->L.y + lights[idx]->L.y);
+		light_cdf[idx] = (lights[idx]->l_emit.x + lights[idx]->l_emit.y + lights[idx]->l_emit.y);
 		cdf_sum += light_cdf[idx];
 	}
 

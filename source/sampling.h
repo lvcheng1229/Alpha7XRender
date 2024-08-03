@@ -4,8 +4,10 @@
 
 inline float powerHeuristic(int nf, float wf, int ng, float wg)
 {
-	assert(false);
-	return 0;
+    float f = nf * wf, g = ng * wg;
+    if (std::isinf((f*f)))
+        return 1;
+    return (f * f) / ((f * f) + (g * g));
 }
 
 inline glm::vec3 sampleUniformTriangle(glm::vec2 u) 

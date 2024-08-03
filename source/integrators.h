@@ -15,6 +15,10 @@ public:
 
 	virtual void render() = 0;
 	SShapeInteraction intersect(CRay ray)const;
+	bool traceVisibilityRay(CRay ray, float max_t)
+	{
+		return accelerator->traceVisibilityRay(ray, max_t);
+	}
 private:
 	CAccelerator* accelerator;
 };
@@ -26,6 +30,7 @@ public:
 
 	void render();
 private:
+
 	void evaluatePixelSample(glm::vec2 pixel_pos, CSampler* sampler);
 	glm::vec3 Li(CRay ray, CSampler* sampler);
 

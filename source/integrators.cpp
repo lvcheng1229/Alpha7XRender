@@ -121,8 +121,6 @@ glm::vec3 CPathIntegrator::Li(CRay ray, CSampler* sampler)
 
 glm::vec3 CPathIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, const CBSDF* bsdf, CSampler* sampler)
 {
-	glm::vec3 radiance;
-
 	CLightSampleContext sample_ctx(sf_interaction);
 
 	float u = sampler->get1D();
@@ -135,18 +133,25 @@ glm::vec3 CPathIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, 
 
 	glm::vec2 u_light = sampler->get2D();
 	SLightSample light_sample = light->SampleLi(sample_ctx, u_light);
-	// if (xxx)
+	if (light_sample.L == glm::vec3(0, 0, 0) && light_sample.pdf == 0)
+	{
+		return glm::vec3(0, 0, 0);
+	}
 
 	glm::vec3 wo = sf_interaction.wo;
 	glm::vec3 wi = light_sample.wi;
 	glm::vec3 f = bsdf->f(wo, wi)* glm::abs(glm::dot(wi, sf_interaction.norm));
 
-	// if unoccluded
+	bool visible = traceVisibilityRay(CRay(sf_interaction.position, wi), glm::distance(sf_interaction.position, light_sample.iteraction.position));
+	if (!visible)
+	{
+		return glm::vec3(0, 0, 0);
+	}
 
 	float p_light = sampled_light.pmf* light_sample.pdf;
-	// if is delta light
+	
+	// if is delta light {}
 	// else
-
 	{
 		float p_bsdf = bsdf->pdf(wo, wi);
 
@@ -154,8 +159,5 @@ glm::vec3 CPathIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, 
 		float w_l = powerHeuristic(1, p_light, 1, p_bsdf);
 		return w_l * light_sample.L * f / p_light;
 	}
-
-
-	return radiance;
 }
 

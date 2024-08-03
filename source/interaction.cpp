@@ -4,6 +4,7 @@ CBSDF CSurfaceInterraction::getBSDF()
 {
     if (!material)
     {
+        assert(false);
         return CBSDF();
     }
 
