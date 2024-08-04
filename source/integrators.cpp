@@ -14,6 +14,7 @@ CPathIntegrator::CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSam
 	, camera(camera)
 	, sampler_prototype(sampler)
 {
+	light_sampler = std::make_shared<CPowerLightSampler>(lights);
 }
 
 void CPathIntegrator::render()
@@ -34,6 +35,7 @@ void CPathIntegrator::render()
 			{
 				glm::u32vec2 pix_pos = glm::u32vec2(pixel_x, pixel_y);
 				CSampler* sampler = sampler_prototype; // todo: TLS
+				sampler->initPixelSample(pix_pos, spp_idx);
 				evaluatePixelSample(pix_pos, sampler);
 			}
 		}
@@ -79,38 +81,47 @@ glm::vec3 CPathIntegrator::Li(CRay ray, CSampler* sampler)
 			break;
 		}
 
-		// if no specular surface
-		// sample direct illumination
-		glm::vec3 radiance_direct = SampleLd(sf_interaction, &bsdf, sampler);
-		radiance += radiance_direct * beta;
-
-		// sample BSDF and generate a new direction
-		glm::vec3 wo = -ray.direction;
-		float u = sampler->get1D();
-		SBSDFSample bsdf_sample = bsdf.sample_f(wo,u, sampler->get2D());
-
-		// if xx
-
-		// update path thoughput
-		beta *= bsdf_sample.f * glm::abs(glm::dot(bsdf_sample.wi, sf_interaction.norm)) * bsdf_sample.pdf;
-
-		if (bsdf_sample.isTransmission())
+		// if no specular surface sample direct illumination
 		{
-			eta_scale *= bsdf_sample.eta;
+			glm::vec3 radiance_direct = SampleLd(sf_interaction, &bsdf, sampler);
+			radiance += radiance_direct * beta;
 		}
 
-		ray = sf_interaction.spawnRay(bsdf_sample.wi);
-
-		glm::vec3 rr_beta = beta * eta_scale;
-		float max_comp = glm::max(glm::max(rr_beta.x, rr_beta.y), rr_beta.z);
-		if (max_comp < 1 && depth > 1)
+		// sample BSDF and generate a new direction
 		{
-			float q = glm::max(0.0f, 1.0f - max_comp);
-			if (sampler->get1D() < q)
+			glm::vec3 wo = -ray.direction;
+			float u = sampler->get1D();
+			std::shared_ptr<SBSDFSample> bsdf_sample = bsdf.sample_f(wo, u, sampler->get2D());
+
+			if (bsdf_sample->pdf == 0)
 			{
 				break;
 			}
-			beta /= 1 - q;
+
+			// update path thoughput
+			beta *= bsdf_sample->f * glm::abs(glm::dot(bsdf_sample->wi, sf_interaction.norm)) * bsdf_sample->pdf;
+
+			if (bsdf_sample->isTransmission())
+			{
+				eta_scale *= bsdf_sample->eta;
+			}
+
+			ray = sf_interaction.spawnRay(bsdf_sample->wi);
+		}
+
+		// Russian roulette
+		{
+			glm::vec3 rr_beta = beta * eta_scale;
+			float max_comp = glm::max(glm::max(rr_beta.x, rr_beta.y), rr_beta.z);
+			if (max_comp < 1 && depth > 1)
+			{
+				float q = glm::max(0.0f, 1.0f - max_comp);
+				if (sampler->get1D() < q)
+				{
+					break;
+				}
+				beta /= 1 - q;
+			}
 		}
 
 		depth++;

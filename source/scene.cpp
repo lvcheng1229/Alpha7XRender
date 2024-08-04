@@ -228,7 +228,7 @@ void CAlpa7XScene::SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SC
 	int spp = ipt_sampler.parameters.GetOneInt("pixelsamples", 4);
 	if (ipt_sampler.name == "sobol")
 	{
-		sampler = new CSobelSampler(spp);
+		sampler = new CSobelSampler(spp, glm::ivec2(img_sz_x, img_sz_y));
 	}
 	else
 	{

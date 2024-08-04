@@ -13,8 +13,6 @@ public:
 	CInteraction iteraction;
 };
 
-
-
 class CLightSampleContext
 {
 public:

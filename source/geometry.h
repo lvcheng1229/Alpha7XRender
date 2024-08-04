@@ -43,17 +43,6 @@ public:
 		return 0.5f * glm::length(glm::cross(positions[1] - positions[0], positions[2] - positions[0]));
 	}
 
-	//inline float solidAngle(glm::vec3 position)
-	//{
-	//	const STriangleMesh* tri_mesh = triangle_mesh;
-	//	const std::vector<int>& indices = tri_mesh->indices;
-	//	const std::vector<glm::vec3> points = tri_mesh->points;
-	//	glm::i32vec3 vtx_indices(indices[tri_index * 3 + 0], indices[tri_index * 3 + 1], indices[tri_index * 3 + 2]);
-	//	glm::vec3 positions[3] = { points[vtx_indices.x],points[vtx_indices.y], points[vtx_indices.z] };
-	//
-	//	sphericalTriangleArea(glm::normalize(positions[0] - position), glm::normalize(positions[1] - position), glm::normalize(positions[2] - position));
-	//}
-
 	inline SShapeSample sample(glm::vec2 u)
 	{
 		const STriangleMesh* tri_mesh = triangle_mesh;
@@ -71,13 +60,6 @@ public:
 
 		return SShapeSample{ CInteraction {sampled_pos,sampled_normal}, 1.0f / area()};
 	}
-
-	//inline SShapeSample sample(glm::vec2 u)
-	//{
-	//	//	todo: spherical tirangle sampling!
-	//	//	float solid_angle = solidAngle(sample_ctx.position);
-	//	return sample(u);
-	//}
 
 	STriangleMesh* triangle_mesh;
 	int tri_index = -1;
@@ -101,8 +83,8 @@ public:
 	
 	SShapeInteraction intersection(CRay ray);
 
-	// true visible
-	// false occluded
+	// true = visible
+	// false = occluded
 	bool traceVisibilityRay(CRay ray, float max_t);
 
 	RTCGeometry createRTCGeometry(SShapeSceneEntity* shape_entity, int ID);

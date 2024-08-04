@@ -64,13 +64,12 @@ SShapeInteraction CAccelerator::intersection(CRay ray)
 		const SA7XGeometry& scene_geometry = scene_geometries[embree_ray.hit.geomID];
 		glm::vec3 hit_normal = glm::normalize(glm::vec3(embree_ray.hit.Ng_x, embree_ray.hit.Ng_y, embree_ray.hit.Ng_z));
 		int mat_idx = scene_geometry.material_idx;
-		
-		//rtcAttachGeometryByID
 
 		shape_interaction.hit_t = embree_ray.ray.tfar;
+		shape_interaction.sface_interaction.position = ray.origin + shape_interaction.hit_t * ray.direction;
 		shape_interaction.sface_interaction.norm = faceForward(ray.direction, hit_normal);
 		shape_interaction.sface_interaction.material = scene_materials[mat_idx];
-		shape_interaction.sface_interaction.wo = ray.direction;
+		shape_interaction.sface_interaction.wo = -ray.direction;
 	}
 
 	return shape_interaction;
