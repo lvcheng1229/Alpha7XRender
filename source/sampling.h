@@ -66,20 +66,27 @@ extern const uint32_t SobolMatrices32[NSobolDimensions * SobolMatrixSize];
 extern const uint64_t VdCSobolMatrices[][SobolMatrixSize];
 extern const uint64_t VdCSobolMatricesInv[][SobolMatrixSize];
 
-inline uint32_t fastOwenScrambler(uint32_t v)
-{
-    
-    uint32_t seed = std::hash<uint32_t>()(42u);
-    v = reverseBits32(v);
-    v ^= v * 0x3d20adea;
-    v += seed;
-    v *= (seed >> 16) | 1;
-    v ^= v * 0x05526c56;
-    v ^= v * 0x53a22864;
-    return reverseBits32(v);
-}
+struct SNoRandomizer {
+   uint32_t operator()(uint32_t v) const { return v; }
+};
 
-inline float sobolSample(int64_t a, int dimension, std::function<uint32_t(uint32_t)> randomizer)
+struct SFastOwenScrambler {
+    SFastOwenScrambler(uint32_t seed) : seed(seed) {}
+        uint32_t operator()(uint32_t v) const {
+        v = reverseBits32(v);
+        v ^= v * 0x3d20adea;
+        v += seed;
+        v *= (seed >> 16) | 1;
+        v ^= v * 0x05526c56;
+        v ^= v * 0x53a22864;
+        return reverseBits32(v);
+    }
+
+    uint32_t seed;
+};
+
+template <typename R>
+inline float sobolSample(int64_t a, int dimension, R randomizer)
 {
     uint32_t v = 0;
     for (int i = dimension * SobolMatrixSize; a != 0; a >>= 1, i++)

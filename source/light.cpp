@@ -2,7 +2,7 @@
 
 SLightSample CDiffuseAreaLight::SampleLi(CLightSampleContext sample_ctx, glm::vec2 u)
 {
-	SShapeSample shape_sample =  triangle.sample(u);
+	SShapeSample shape_sample = triangle.sample(SShapeSampleDesc{ sample_ctx.position }, u);
 	if (shape_sample.pdf == 0 || glm::length(glm::abs(shape_sample.inter.position - sample_ctx.position)) == 0)
 	{
 		assert(false);

@@ -11,6 +11,10 @@ enum EBxDFFlags
     BXDF_FG_Reflection = 1 << 0,
     BXDF_FG_Transmission = 1 << 1,
 
+    // todo:
+    // glossy specular
+    // ideal diffuse
+
     BXDF_FG_Diffuse = 1 << 2,
     BXDF_FG_Glossy = 1 << 3,
     BXDF_FG_Specular = 1 << 4,
@@ -27,6 +31,8 @@ enum EBxDFReflectFlags
 };
 
 inline bool isNonSpecular(EBxDFFlags flag) { return flag & (EBxDFFlags::BXDF_FG_Diffuse | EBxDFFlags::BXDF_FG_Glossy); }
+inline bool isDiffuse(EBxDFFlags flag) { return flag & EBxDFFlags::BXDF_FG_Diffuse; }
+inline bool isGlossy(EBxDFFlags flag) { return flag & EBxDFFlags::BXDF_FG_Glossy; }
 
 struct SBSDFSample
 {
@@ -61,6 +67,7 @@ public:
 private:
 };
 
+// lambert
 class CDiffuseBxDF : public CBxDF
 {
 public:
@@ -73,7 +80,7 @@ public:
         {
             return glm::vec3(0, 0, 0);
         }
-        return reflectance;
+        return reflectance / glm::pi<float>();
     }
 
     inline float pdf(glm::vec3 wo, glm::vec3 wi, ETransportMode transport_mode, EBxDFReflectFlags reflect_flag = EBxDFReflectFlags::BXDF_RF_Reflection)
@@ -100,7 +107,7 @@ public:
         }
 
         float pdf = cosineHemispherePDF(std::abs(wi.z));
-        return std::make_shared<SBSDFSample>(reflectance, wi, pdf, EBxDFFlags::BXDF_FG_DiffuseReflection);
+        return std::make_shared<SBSDFSample>(reflectance / glm::pi<float>(), wi, pdf, EBxDFFlags::BXDF_FG_DiffuseReflection);
     }
 
     EBxDFFlags flags()const

@@ -31,11 +31,13 @@ struct SCameraSceneEntity : public SSceneEntity
 struct SShapeSceneEntity : public SSceneEntity
 {
     SShapeSceneEntity() = default;
-    SShapeSceneEntity(const std::string& name, pbrt::ParameterDictionary parameters, const std::string& ipt_material_name)
+    SShapeSceneEntity(const std::string& name, pbrt::ParameterDictionary parameters, const std::string& ipt_material_name, int light_index)
         :SSceneEntity(name, parameters)
-        , material_name(ipt_material_name) {};
+        , material_name(ipt_material_name)
+        , light_index(light_index) {};
 
     std::string material_name;
+    int light_index;
 
 };
 
@@ -50,13 +52,13 @@ public:
 
     ~CAlpa7XScene();
 
-    std::unique_ptr<CIntegrator> createIntegrator(CPerspectiveCamera* camera,CSampler* sampler, CAccelerator* ipt_scene_inter_cpt, std::vector<CLight*> lights);
+    std::unique_ptr<CIntegrator> createIntegrator(CPerspectiveCamera* camera,CSampler* sampler, CAccelerator* ipt_scene_inter_cpt, std::vector<std::shared_ptr<CLight>> lights);
 
     void SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SCameraSceneEntity ipt_camera, SSceneEntity ipt_sampler, SSceneEntity ipt_integrator, SSceneEntity ipt_accelerator);
 
     inline CPerspectiveCamera* getCamera() { return camera; }
     inline CSampler* getSampler() { return sampler; }
-    CAccelerator* createAccelerator();
+    CAccelerator* createAccelerator(std::vector<std::shared_ptr<CLight>>& lights);
 
     CPerspectiveCamera* camera;
     CSampler* sampler;
@@ -65,8 +67,10 @@ public:
     
     SSceneEntity integrators;
     std::vector<SShapeSceneEntity> shapes;
+    std::vector<SSceneEntity> light_entities;
     std::vector<std::pair<std::string, SSceneEntity>> named_materials;
 private:
+    std::vector<std::shared_ptr<STriangleMesh>> scene_triangle_meshes;
 };
 
 class Alpha7XSceneBuilder : public pbrt::ParserTarget
@@ -129,8 +133,9 @@ private:
     struct SGraphicsState
     {
         glm::mat4x4 transform;
-        std::string area_light_name;
         std::string material_name;
+        std::string area_light_name;
+        pbrt::ParameterDictionary area_light_params;
     };
     SGraphicsState graphics_state;
     std::vector<SGraphicsState> pushed_graphics_states;

@@ -4,7 +4,7 @@
 
 struct SSampledLight
 {
-	CLight* light;
+	std::shared_ptr<CLight> light;
 	float pmf; //probability mass function
 };
 
@@ -17,10 +17,9 @@ public:
 class CPowerLightSampler : public CLightSampler
 {
 public:
-	CPowerLightSampler(std::vector<CLight*> input_lights);
+	CPowerLightSampler(std::vector<std::shared_ptr<CLight>> input_lights);
 	SSampledLight Sample(float u);
 private:
-	std::vector<CLight*>lights;
+	std::vector<std::shared_ptr<CLight>>lights;
 	std::vector<float> light_cdf;
-	float cdf_sum;
 };

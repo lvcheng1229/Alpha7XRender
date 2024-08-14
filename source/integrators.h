@@ -26,12 +26,12 @@ private:
 class CPathIntegrator : public CIntegrator
 {
 public:
-	CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<CLight*> lights);
+	CPathIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<std::shared_ptr<CLight>> lights);
 
 	void render();
 private:
 
-	void evaluatePixelSample(glm::vec2 pixel_pos, CSampler* sampler);
+	glm::vec3 evaluatePixelSample(glm::vec2 pixel_pos, CSampler* sampler);
 	glm::vec3 Li(CRay ray, CSampler* sampler);
 
 	glm::vec3 SampleLd(const CSurfaceInterraction& sf_interaction, const CBSDF* bsdf, CSampler* sampler);
@@ -40,6 +40,18 @@ private:
 	std::shared_ptr<CLightSampler> light_sampler;
 	CPerspectiveCamera* camera;
 	CSampler* sampler_prototype;
-	
+};
+
+class CSPPMIntegrator : public CIntegrator
+{
+public:
+	void render();
+private:
+	glm::vec3 SampleLd(const CSurfaceInterraction& sf_interaction, const CBSDF* bsdf, CSampler* sampler);
+
+	int max_depth;
+	CPerspectiveCamera* camera;
+	int iteration_num = 0;
+	CSampler* sampler_prototype;
 };
 

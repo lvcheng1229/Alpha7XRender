@@ -88,6 +88,8 @@ namespace pbrt {
         std::vector< glm::vec3> GetNormal3fArray(const std::string& name) const;
         std::vector<std::string> GetStringArray(const std::string& name) const;
 
+        glm::vec3 GetRGBColor(const std::string& name)const;
+
         inline ParsedParameterVector& getParameters() { return params; }
     private:
 

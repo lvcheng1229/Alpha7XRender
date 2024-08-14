@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include "geometry.h"
@@ -27,6 +28,9 @@ public:
 class CLight
 {
 public:
+	CLight(glm::vec3 ipt_l_emit)
+		:l_emit(ipt_l_emit) {};
+
 	virtual SLightSample SampleLi(CLightSampleContext sample_ctx, glm::vec2 u) = 0;
 	glm::vec3 l_emit;
 };
@@ -34,6 +38,10 @@ public:
 class CDiffuseAreaLight : public CLight
 {
 public:
+	CDiffuseAreaLight(CTriangle ipt_triangle, glm::vec3 ipt_l_emit)
+		:CLight(ipt_l_emit)
+		, triangle(ipt_triangle) {};
+
 	SLightSample SampleLi(CLightSampleContext sample_ctx, glm::vec2 u);
 	
 	inline glm::vec3 L(glm::vec3 normal,glm::vec3 w)
@@ -42,11 +50,9 @@ public:
 		{
 			return glm::vec3(0, 0, 0);
 		}
-		assert(false);
-		return scale * l_emit;
+		return l_emit;
 	}
 
-	float scale;
 	CTriangle triangle;
 };
 

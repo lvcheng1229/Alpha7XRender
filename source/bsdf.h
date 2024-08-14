@@ -9,7 +9,10 @@ public:
 	CBSDF() :normal(glm::vec3(0, 0, 0)) {};
 	CBSDF(glm::vec3 ipt_normal, std::shared_ptr<CBxDF> ipt_bxdf)
 		:normal(ipt_normal)
-		, bxdf(ipt_bxdf) {};
+		, bxdf(ipt_bxdf) 
+	{
+		tangen_basis = CFTangentBasis::fromZ(normal);
+	};
 
 	glm::vec3 f(glm::vec3 wo, glm::vec3 wi, ETransportMode transport_mode = ETransportMode::TM_Radiance)const
 	{
@@ -43,6 +46,11 @@ public:
 		std::shared_ptr<SBSDFSample> bs = bxdf->sample_f(wo_local, u, u2, transport_mode, flags);
 		bs->wi = tangen_basis.fromLocal(bs->wi);
 		return bs;
+	}
+
+	inline EBxDFFlags flags()const
+	{
+		return bxdf->flags();
 	}
 
 private:

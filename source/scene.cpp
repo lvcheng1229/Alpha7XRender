@@ -12,10 +12,12 @@ void Alpha7XSceneBuilder::Shape(const std::string& name, pbrt::ParsedParameterVe
 	int areaLightIndex = -1;
 	if (!graphics_state.area_light_name.empty())
 	{
-		assert(false);
+		scene->light_entities.push_back(SSceneEntity(graphics_state.area_light_name, graphics_state.area_light_params));
+		areaLightIndex = scene->light_entities.size() - 1;
+		graphics_state.area_light_name = std::string();
 	}
 
-	SShapeSceneEntity shape_entity(name, dict, graphics_state.material_name);
+	SShapeSceneEntity shape_entity(name, dict, graphics_state.material_name, areaLightIndex);
 	shapes.push_back(std::move(shape_entity));
 }
 
@@ -166,6 +168,8 @@ void Alpha7XSceneBuilder::LightSource(const std::string& name, pbrt::ParsedParam
 
 void Alpha7XSceneBuilder::AreaLightSource(const std::string& name, pbrt::ParsedParameterVector params)
 {
+	graphics_state.area_light_name = name;
+	graphics_state.area_light_params = pbrt::ParameterDictionary(std::move(params));
 }
 
 void Alpha7XSceneBuilder::ReverseOrientation()
@@ -200,7 +204,7 @@ CAlpa7XScene::~CAlpa7XScene()
 	delete accelerator;
 }
 
-std::unique_ptr<CIntegrator> CAlpa7XScene::createIntegrator(CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_scene_inter_cpt, std::vector<CLight*> lights)
+std::unique_ptr<CIntegrator> CAlpa7XScene::createIntegrator(CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_scene_inter_cpt, std::vector<std::shared_ptr<CLight>> lights)
 {
 	if (integrators.name == "path")
 	{
@@ -236,7 +240,7 @@ void CAlpa7XScene::SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SC
 	}
 }
 
-CAccelerator* CAlpa7XScene::createAccelerator()
+CAccelerator* CAlpa7XScene::createAccelerator(std::vector<std::shared_ptr<CLight>>& lights)
 {
 	if (accelerator == nullptr)
 	{
@@ -268,8 +272,29 @@ CAccelerator* CAlpa7XScene::createAccelerator()
 		for (int shape_idx = 0; shape_idx < shapes.size(); shape_idx++)
 		{
 			SShapeSceneEntity& shape_entity = shapes[shape_idx];
-			CLight* area_light = nullptr;
-			if (area_light == nullptr)
+
+			if (shape_entity.light_index != -1)
+			{
+				std::shared_ptr<STriangleMesh> triangle_mesh = std::make_shared<STriangleMesh>();
+				triangle_mesh->indices = shape_entity.parameters.GetIntArray("indices");
+				triangle_mesh->points = shape_entity.parameters.GetPoint3fArray("P");
+				triangle_mesh->normals = shape_entity.parameters.GetNormal3fArray("N");
+				triangle_mesh->uvs = shape_entity.parameters.GetPoint2fArray("uv");
+
+				scene_triangle_meshes.push_back(triangle_mesh);
+
+				SSceneEntity& light_entitie = light_entities[shape_entity.light_index];
+				glm::vec3 l_emit = light_entitie.parameters.GetRGBColor("L");
+				for (int tri_idx = 0; tri_idx < triangle_mesh->indices.size() / 3; tri_idx++)
+				{
+					CTriangle triangle;
+					triangle.triangle_mesh = triangle_mesh;
+					triangle.tri_index = tri_idx;
+					std::shared_ptr<CLight> area_light = std::make_shared<CDiffuseAreaLight>(triangle, l_emit);
+					lights.push_back(area_light);
+				}
+			}
+			
 			{
 				auto mat_map_iter = accelerator->mat_name_idx_map.find(shape_entity.material_name);
 				if (mat_map_iter != accelerator->mat_name_idx_map.end())
@@ -283,12 +308,8 @@ CAccelerator* CAlpa7XScene::createAccelerator()
 				{
 					assert(false);
 				}
-
 			}
-			else
-			{
-				assert(false);
-			}
+			
 		}
 		accelerator->finalizeRtSceneCreate();
 	}

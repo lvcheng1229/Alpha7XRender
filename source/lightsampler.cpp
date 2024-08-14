@@ -1,20 +1,26 @@
 #include "lightsampler.h"
 
-CPowerLightSampler::CPowerLightSampler(std::vector<CLight*> input_lights)
+CPowerLightSampler::CPowerLightSampler(std::vector<std::shared_ptr<CLight>> input_lights)
 {
+	std::vector<float> pre_sum;
 	const int ipt_lt_num = input_lights.size();
 	lights.resize(ipt_lt_num);
+	light_cdf.resize(ipt_lt_num);
+	pre_sum.resize(ipt_lt_num);
 
 	for (int idx = 0; idx < lights.size(); idx++)
 	{
 		lights[idx] = input_lights[idx];
-		light_cdf[idx] = (lights[idx]->l_emit.x + lights[idx]->l_emit.y + lights[idx]->l_emit.y);
-		cdf_sum += light_cdf[idx];
+
+		float light_sum = (lights[idx]->l_emit.x + lights[idx]->l_emit.y + lights[idx]->l_emit.z);
+		pre_sum[idx] = idx == 0 ? light_sum : (pre_sum[idx - 1] + light_sum);
 	}
+
+	float cdf_sum = pre_sum[pre_sum.size() - 1];
 
 	for (int idx = 0; idx < lights.size(); idx++)
 	{
-		light_cdf[idx] /= cdf_sum;
+		light_cdf[idx] = pre_sum[idx] / cdf_sum;
 	}
 }
 
@@ -24,13 +30,12 @@ SSampledLight CPowerLightSampler::Sample(float u)
 	int sample_idx = 0;
 	for (sample_idx = 0; sample_idx < lights.size(); sample_idx++)
 	{
-		if (sample_value > light_cdf[sample_idx])
+		if (sample_value < light_cdf[sample_idx])
 		{
 			break;
 		}
 	}
 
-	sample_idx--;
 	float prob_mass_func = 0.0;
 	if (sample_idx == 0)
 	{

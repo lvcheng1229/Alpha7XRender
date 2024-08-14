@@ -55,8 +55,7 @@ public:
 
 	virtual glm::vec2 getPixel2D()
 	{
-		auto no_randomizer = [](uint32_t ipt)->uint32_t {return ipt; };
-		glm::vec2 u(sobolSample(sobol_index, 0, no_randomizer), sobolSample(sobol_index, 1, no_randomizer));
+		glm::vec2 u(sobolSample(sobol_index, 0, SNoRandomizer()), sobolSample(sobol_index, 1, SNoRandomizer()));
 		for (int dim = 0; dim < 2; ++dim)
 		{
 			u[dim] = glm::clamp(u[dim] * scale - pixel[dim], 0.0f, float_one_minus_epsilon);
@@ -68,7 +67,8 @@ private:
 
 	float sampleDimension(int dimension)const
 	{
-		return sobolSample(sobol_index, dimension, fastOwenScrambler);
+		uint32_t seed = std::hash<uint32_t>()(dimension);
+		return sobolSample(sobol_index, dimension, SFastOwenScrambler(seed));
 	}
 
 	float scale;

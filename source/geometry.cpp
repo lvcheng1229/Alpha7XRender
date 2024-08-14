@@ -47,7 +47,7 @@ SShapeInteraction CAccelerator::intersection(CRay ray)
 	embree_ray.ray.dir_y = ray.direction.y;
 	embree_ray.ray.dir_z = ray.direction.z;
 	embree_ray.ray.tnear = 0;
-	embree_ray.ray.tfar = 1e30f;
+	embree_ray.ray.tfar = std::numeric_limits<float>::max();
 	embree_ray.ray.time = 0;
 	embree_ray.ray.mask = -1;
 	embree_ray.hit.u = embree_ray.hit.v = 0;
@@ -88,7 +88,7 @@ bool CAccelerator::traceVisibilityRay(CRay ray, float max_t)
 	visibility_ray.dir_y = ray.direction.y;
 	visibility_ray.dir_z = ray.direction.z;
 	visibility_ray.tnear = 0;
-	visibility_ray.tfar = max_t;
+	visibility_ray.tfar = max_t - 1e-5;
 	visibility_ray.time = 0;
 	visibility_ray.mask = -1;
 	rtcOccluded1(rt_scene, &visibility_ray, &sargs);
@@ -105,10 +105,13 @@ RTCGeometry CAccelerator::createRTCGeometry(SShapeSceneEntity* shape_entity, int
 	{
 		std::vector<int> indices = shape_entity->parameters.GetIntArray("indices");
 		std::vector<glm::vec3> positions = shape_entity->parameters.GetPoint3fArray("P");
+		std::vector<glm::vec3> normals = shape_entity->parameters.GetPoint3fArray("N");
 		std::vector<glm::vec2> uvs = shape_entity->parameters.GetPoint2fArray("uv");
 
 		RTCGeometry geom = rtcNewGeometry(rt_device, RTC_GEOMETRY_TYPE_TRIANGLE);
 		float* geo_vertices = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), positions.size());
+		float* geo_normals = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_NORMAL, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), normals.size());
+		float* geo_uvs = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT2, 2 * sizeof(float), uvs.size());
 		unsigned* geo_indices = (unsigned*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(unsigned), indices.size() / 3);
 		memcpy(geo_vertices, positions.data(), positions.size() * sizeof(glm::vec3));
 		for (int idx = 0; idx < indices.size(); idx++)

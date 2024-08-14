@@ -269,5 +269,19 @@ std::vector<std::string> ParameterDictionary::GetStringArray(
     return lookupArray<ParameterType::String>(name);
 }
 
+glm::vec3 ParameterDictionary::GetRGBColor(const std::string& name) const
+{
+    for (const ParsedParameter* p : params)
+    {
+        if (p->name == name && p->type == "rgb")
+        {
+            return glm::vec3(p->floats[0], p->floats[1], p->floats[2]);
+        }
+    }
+
+
+    return glm::vec3();
+}
+
 }
 

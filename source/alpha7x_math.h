@@ -54,9 +54,9 @@ inline void coordinateSystem(glm::vec3 v1, glm::vec3& v2, glm::vec3& v3)
 {
 	float sign = v1.z > 0 ? 1.0 : -1.0;
 	float a = (-1.0) / (sign + v1.z);
-	float b = v1.x + v1.y * a;
-	v2 = glm::vec3(1 + sign * a * (v1.z * v1.z), sign * b, -sign * v1.x);
-	v3 = glm::vec3(b, sign + a * (v1.z * v1.z), -v1.y);
+	float b = v1.x * v1.y * a;
+	v2 = glm::vec3(1 + sign * a * (v1.x * v1.x), sign * b, -sign * v1.x);
+	v3 = glm::vec3(b, sign + a * (v1.y * v1.y), -v1.y);
 }
 
 class CFTangentBasis
