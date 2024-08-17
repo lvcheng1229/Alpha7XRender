@@ -183,6 +183,7 @@ CSPPMIntegrator::CSPPMIntegrator(int max_depth, CPerspectiveCamera* camera, CSam
 	, camera(camera)
 	, sampler_prototype(sampler)
 {
+	assert(false);//initial radius
 	light_sampler = std::make_shared<CPowerLightSampler>(lights);
 }
 
@@ -197,11 +198,15 @@ struct SPPMPixel
 	};
 
 	glm::vec3 phi;
-	int m;
 
 	float radius = 0.0;
 	SVisiblePoint visible_point;
 	glm::vec3 l_d;
+	
+	glm::vec3 tau = glm::vec3(0,0,0);
+
+	int m = 0;
+	float n = 0.0;
 };
 
 struct SPPMPixelListNode
@@ -234,13 +239,17 @@ void CSPPMIntegrator::render()
 	const glm::u32vec2 image_size = rgb_film->getImageSize();
 	const int image_area = image_size.x * image_size.y;
 
-	std::unique_ptr<SPPMPixel[]> pixels(new SPPMPixel[image_area]);
+	std::vector<SPPMPixel>pixels(image_area);
+	for (auto& pixel : pixels)
+	{
+		pixel.radius = initial_radius;
+	}
 
 	for (int iter_idx = 0; iter_idx < iteration_num; iter_idx++)
 	{
 
-		glm::u32vec2 bound_min = glm::u32vec2(0, 0);
-		glm::u32vec2 bound_max = image_size;
+		const glm::u32vec2 bound_min = glm::u32vec2(0, 0);
+		const glm::u32vec2 bound_max = image_size;
 		for (glm::uint32 pixel_x = bound_min.x; pixel_x < bound_max.x; pixel_x++)
 		{
 			for (glm::uint32 pixel_y = bound_min.y; pixel_y < bound_max.y; pixel_y++)
@@ -352,9 +361,6 @@ void CSPPMIntegrator::render()
 		}
 		
 		{
-			int global_node_idx = 0;
-			glm::u32vec2 bound_min = glm::u32vec2(0, 0);
-			glm::u32vec2 bound_max = image_size;
 			for (glm::uint32 pixel_x = bound_min.x; pixel_x < bound_max.x; pixel_x++)
 			{
 				for (glm::uint32 pixel_y = bound_min.y; pixel_y < bound_max.y; pixel_y++)
@@ -406,103 +412,130 @@ void CSPPMIntegrator::render()
 					return u;
 					};
 
-				auto sample_2d = [&]() {
-					glm::vec2 u
+					auto sample_2d = [&]() {
+						glm::vec2 u
+						{
+							scrambledRadicalInverse(halton_dim, haltton_idx,(*permutation_array)[halton_dim]),
+							scrambledRadicalInverse(halton_dim + 1, haltton_idx,(*permutation_array)[halton_dim + 1])
+						};
+						halton_dim += 2;
+						return u;
+						};
+
+					float u = sample_1d();
+					SSampledLight sampled_light = light_sampler->Sample(u);
+					std::shared_ptr<CLight> light = sampled_light.light;
+					if (!light)
 					{
-						scrambledRadicalInverse(halton_dim, haltton_idx,(*permutation_array)[halton_dim]),
-						scrambledRadicalInverse(halton_dim + 1, haltton_idx,(*permutation_array)[halton_dim + 1])
-					};
-					halton_dim += 2;
-					return u;
-					};
-
-				float u = sample_1d();
-				SSampledLight sampled_light = light_sampler->Sample(u);
-				std::shared_ptr<CLight> light = sampled_light.light;
-				if (!light)
-				{
-					continue;
-				}
-
-
-				float pdf_light = sampled_light.pmf;
-				
-				glm::vec2 u_light0 = sample_2d();
-				glm::vec2 u_light1 = sample_2d();
-				float u_light_time = sample_1d();
-
-				CRay ray;
-				glm::vec3 light_normal;
-				float pdf_position;
-				float pdf_direction;
-				glm::vec3 Le = light->sampleLe(u_light0, u_light1, ray, light_normal, pdf_position, pdf_direction);
-
-				glm::vec3 beta = std::abs(glm::dot(light_normal, ray.direction)) * Le / (pdf_light * pdf_position * pdf_direction);
-				if (beta.x == 0 && beta.y == 0 && beta.z == 0)
-				{
-					continue;
-				}
-
-				CRay photon_ray(ray.origin, ray.direction);
-
-				for (int depth = 0; depth < max_depth; depth++)
-				{
-					SShapeInteraction sp_interaction = intersect(ray);
-					CSurfaceInterraction& surface_iteraction = sp_interaction.sface_interaction;
-
-					if (sp_interaction.hit_t == std::numeric_limits<float>::max())
-					{
-						break;
+						continue;
 					}
 
-					if (depth > 0)
-					{
-						glm::ivec3 photon_grid_index;
-						if (toGrid(surface_iteraction.position,grid_bound,grid_res, photon_grid_index))
-						{
-							int photon_hash_value = hashVisPoint(photon_grid_index, image_area);
 
-							for (SPPMPixelListNode* pixel_node = grid[photon_hash_value]; pixel_node != nullptr; pixel_node = pixel_node->next_node)
+					float pdf_light = sampled_light.pmf;
+
+					glm::vec2 u_light0 = sample_2d();
+					glm::vec2 u_light1 = sample_2d();
+					float u_light_time = sample_1d();
+
+					CRay ray;
+					glm::vec3 light_normal;
+					float pdf_position;
+					float pdf_direction;
+					glm::vec3 Le = light->sampleLe(u_light0, u_light1, ray, light_normal, pdf_position, pdf_direction);
+
+					glm::vec3 beta = std::abs(glm::dot(light_normal, ray.direction)) * Le / (pdf_light * pdf_position * pdf_direction);
+					if (beta.x == 0 && beta.y == 0 && beta.z == 0)
+					{
+						continue;
+					}
+
+					CRay photon_ray(ray.origin, ray.direction);
+
+					for (int depth = 0; depth < max_depth; depth++)
+					{
+						SShapeInteraction sp_interaction = intersect(ray);
+						CSurfaceInterraction& surface_iteraction = sp_interaction.sface_interaction;
+
+						if (sp_interaction.hit_t == std::numeric_limits<float>::max())
+						{
+							break;
+						}
+
+						if (depth > 0)
+						{
+							glm::ivec3 photon_grid_index;
+							if (toGrid(surface_iteraction.position, grid_bound, grid_res, photon_grid_index))
 							{
-								SPPMPixel* pixel = pixel_node->pixel;
-								float radius = pixel->radius;
-								float photon_distance = glm::distance(pixel->visible_point.position, surface_iteraction.position);
-								if (photon_distance > radius)
+								int photon_hash_value = hashVisPoint(photon_grid_index, image_area);
+
+								for (SPPMPixelListNode* pixel_node = grid[photon_hash_value]; pixel_node != nullptr; pixel_node = pixel_node->next_node)
 								{
-									continue;
+									SPPMPixel* pixel = pixel_node->pixel;
+									float radius = pixel->radius;
+									float photon_distance = glm::distance(pixel->visible_point.position, surface_iteraction.position);
+									if (photon_distance > radius)
+									{
+										continue;
+									}
+
+									glm::vec3 wi = -photon_ray.direction;
+									glm::vec3 phi = beta * pixel->visible_point.beta * pixel->visible_point.bsdf.f(pixel->visible_point.wo, wi);
+									pixel->phi += phi;
+									pixel->m++;
 								}
 
-								glm::vec3 wi = -photon_ray.direction;
-								glm::vec3 phi = beta * pixel->visible_point.beta * pixel->visible_point.bsdf.f(pixel->visible_point.wo, wi);
-								pixel->phi += phi;
-								pixel->m++;
+								glm::vec3 wo = photon_ray.direction;
+								CBSDF bsdf = surface_iteraction.getBSDF();
+								std::shared_ptr<SBSDFSample> bsdf_sample = bsdf.sample_f(wo, sample_1d(), sample_2d(), ETransportMode::TM_Importance);
+
+								if (bsdf_sample.get() == nullptr)
+								{
+									break;
+								}
+
+								glm::vec3 beta_new = beta_new * bsdf_sample->f * std::abs(glm::dot(bsdf_sample->wi, surface_iteraction.norm)) / bsdf_sample->pdf;
+
+								float beta_ratio = glm::compMax(beta_new) / glm::compMax(beta);
+								float q = std::max<float>(0, 1 - beta_ratio);
+								if (sample_1d() < q)
+									break;
+								beta = beta_new / (1 - q);
+
+								photon_ray = CRay(surface_iteraction.position, bsdf_sample->wi);
 							}
-
-							glm::vec3 wo = photon_ray.direction;
-							CBSDF bsdf = surface_iteraction.getBSDF();
-							std::shared_ptr<SBSDFSample> bsdf_sample = bsdf.sample_f(wo,sample_1d(),sample_2d(),ETransportMode::TM_Importance);
-
-							if (bsdf_sample.get() == nullptr)
-							{
-								break;
-							}
-
-							glm::vec3 beta_new = beta_new * bsdf_sample->f * std::abs(glm::dot(bsdf_sample->wi, surface_iteraction.norm)) / bsdf_sample->pdf;
-
-							float beta_ratio = glm::compMax(beta_new) / glm::compMax(beta);
-							float q = std::max<float>(0, 1 - beta_ratio);
-							if (sample_1d() < q)
-								break;
-							beta = beta_new / (1 - q);
-
-							photon_ray = CRay(surface_iteraction.position, bsdf_sample->wi);
 						}
 					}
+			}
+		}
+
+		{
+			for (glm::uint32 pixel_x = bound_min.x; pixel_x < bound_max.x; pixel_x++)
+			{
+				for (glm::uint32 pixel_y = bound_min.y; pixel_y < bound_max.y; pixel_y++)
+				{
+					glm::u32vec2 pix_pos = glm::u32vec2(pixel_x, pixel_y);
+					glm::ivec2 pixel_offset = pix_pos - bound_min;
+					int pixel_idx = pixel_offset.x + pixel_offset.y * (bound_max.x - bound_min.x);
+					SPPMPixel& pixel = pixels[pixel_idx];
+					int m = pixel.m;
+					if (m > 0)
+					{
+						float gamma = 2.0 / 3.0;
+						float n_new = pixel.n + gamma * m;
+						float radius_new = pixel.radius * std::sqrt(n_new / (pixel.n + m));
+
+						pixel.tau = (pixel.tau + pixel.phi) * radius_new * radius_new / (pixel.radius * pixel.radius);
+
+						pixel.n = n_new;
+						pixel.radius = radius_new;
+						pixel.m = 0;
+						pixel.phi = glm::vec3(0, 0, 0);
+					}
+
+					pixel.visible_point.beta = glm::vec3(0, 0, 0);
 				}
 			}
 		}
-	
-
 
 	}
 }

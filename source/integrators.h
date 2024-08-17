@@ -51,6 +51,7 @@ public:
 private:
 	glm::vec3 SampleLd(const CSurfaceInterraction& sf_interaction, const CBSDF* bsdf, CSampler* sampler);
 
+	float initial_radius;
 	std::shared_ptr<CLightSampler> light_sampler;
 	int max_depth;
 	CPerspectiveCamera* camera;
