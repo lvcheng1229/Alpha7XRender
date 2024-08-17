@@ -31,6 +31,7 @@ public:
 	CLight(glm::vec3 ipt_l_emit)
 		:l_emit(ipt_l_emit) {};
 
+	virtual glm::vec3 sampleLe(const glm::vec2& u1, const glm::vec2& u2, CRay& ray, glm::vec3& normal_light, float& pdf_pos, float& pdf_dir) = 0;
 	virtual SLightSample SampleLi(CLightSampleContext sample_ctx, glm::vec2 u) = 0;
 	glm::vec3 l_emit;
 };
@@ -43,7 +44,8 @@ public:
 		, triangle(ipt_triangle) {};
 
 	SLightSample SampleLi(CLightSampleContext sample_ctx, glm::vec2 u);
-	
+	glm::vec3 sampleLe(const glm::vec2& u1, const glm::vec2& u2, CRay& ray, glm::vec3& normal_light, float& pdf_pos, float& pdf_dir)override;
+
 	inline glm::vec3 L(glm::vec3 normal,glm::vec3 w)
 	{
 		if (glm::dot(normal, w) < 0)

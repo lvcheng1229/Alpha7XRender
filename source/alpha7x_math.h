@@ -59,17 +59,17 @@ inline void coordinateSystem(glm::vec3 v1, glm::vec3& v2, glm::vec3& v3)
 	v3 = glm::vec3(b, sign + a * (v1.y * v1.y), -v1.y);
 }
 
-class CFTangentBasis
+class CTangentBasis
 {
 public:
-	CFTangentBasis() :x(glm::vec3(1, 0, 0)), y(glm::vec3(0, 1, 0)), z(glm::vec3(0, 0, 1)) {};
-	CFTangentBasis(glm::vec3 x, glm::vec3 y, glm::vec3 z) :x(x), y(y), z(z) {};
+	CTangentBasis() :x(glm::vec3(1, 0, 0)), y(glm::vec3(0, 1, 0)), z(glm::vec3(0, 0, 1)) {};
+	CTangentBasis(glm::vec3 x, glm::vec3 y, glm::vec3 z) :x(x), y(y), z(z) {};
 
-	static CFTangentBasis fromZ(glm::vec3 ipt_z)
+	static CTangentBasis fromZ(glm::vec3 ipt_z)
 	{
 		glm::vec3 opt_x, opt_y;
 		coordinateSystem(ipt_z, opt_x, opt_y);
-		return CFTangentBasis(opt_x, opt_y, ipt_z);
+		return CTangentBasis(opt_x, opt_y, ipt_z);
 	}
 
 

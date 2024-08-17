@@ -1,4 +1,5 @@
 #include "AABB.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/component_wise.hpp>
 
 namespace glm {
@@ -29,6 +30,18 @@ AABB::AABB(const AABB& aabb)
 
 AABB::~AABB()
 {
+}
+
+glm::vec3 AABB::offset_normalized(glm::vec3 p) const
+{
+    glm::vec3 o = p - mMin;
+    if (mMax.x > mMin.x)
+        o.x /= mMax.x - mMin.x;
+    if (mMax.y > mMin.y)
+        o.y /= mMax.y - mMin.y;
+    if (mMax.z > mMin.z)
+        o.z /= mMax.z - mMin.z;
+    return o;
 }
 
 void AABB::extend(float val)

@@ -45,10 +45,13 @@ private:
 class CSPPMIntegrator : public CIntegrator
 {
 public:
+	CSPPMIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<std::shared_ptr<CLight>> lights);
 	void render();
+
 private:
 	glm::vec3 SampleLd(const CSurfaceInterraction& sf_interaction, const CBSDF* bsdf, CSampler* sampler);
 
+	std::shared_ptr<CLightSampler> light_sampler;
 	int max_depth;
 	CPerspectiveCamera* camera;
 	int iteration_num = 0;

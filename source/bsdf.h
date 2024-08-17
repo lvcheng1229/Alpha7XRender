@@ -11,13 +11,13 @@ public:
 		:normal(ipt_normal)
 		, bxdf(ipt_bxdf) 
 	{
-		tangen_basis = CFTangentBasis::fromZ(normal);
+		tangent_basis = CTangentBasis::fromZ(normal);
 	};
 
 	glm::vec3 f(glm::vec3 wo, glm::vec3 wi, ETransportMode transport_mode = ETransportMode::TM_Radiance)const
 	{
-		glm::vec3 wo_local = tangen_basis.toLocal(wo);
-		glm::vec3 wi_local = tangen_basis.toLocal(wi);
+		glm::vec3 wo_local = tangent_basis.toLocal(wo);
+		glm::vec3 wi_local = tangent_basis.toLocal(wi);
 		if (wo_local.z == 0)
 		{
 			return glm::vec3(0,0,0);
@@ -27,8 +27,8 @@ public:
 
 	float pdf(glm::vec3 ipt_wo, glm::vec3 ipt_wi, ETransportMode transport_mode = ETransportMode::TM_Radiance, EBxDFReflectFlags sample_flags = EBxDFReflectFlags::BXDF_RF_All)const
 	{
-		glm::vec3 wo_local = tangen_basis.toLocal(ipt_wo);
-		glm::vec3 wi_local = tangen_basis.toLocal(ipt_wi);
+		glm::vec3 wo_local = tangent_basis.toLocal(ipt_wo);
+		glm::vec3 wi_local = tangent_basis.toLocal(ipt_wi);
 		if (wo_local.z == 0)
 		{
 			return 0;
@@ -38,13 +38,13 @@ public:
 
 	std::shared_ptr<SBSDFSample> sample_f(glm::vec3 wo_world, float u, glm::vec2 u2, ETransportMode transport_mode = ETransportMode::TM_Radiance, EBxDFReflectFlags flags = EBxDFReflectFlags::BXDF_RF_All)
 	{
-		glm::vec3 wo_local = tangen_basis.toLocal(wo_world);
+		glm::vec3 wo_local = tangent_basis.toLocal(wo_world);
 		if (wo_local.z == 0 || !(bxdf->flags() & BXDF_RF_All))
 		{
 			return nullptr;
 		}
 		std::shared_ptr<SBSDFSample> bs = bxdf->sample_f(wo_local, u, u2, transport_mode, flags);
-		bs->wi = tangen_basis.fromLocal(bs->wi);
+		bs->wi = tangent_basis.fromLocal(bs->wi);
 		return bs;
 	}
 
@@ -54,7 +54,7 @@ public:
 	}
 
 private:
-	CFTangentBasis  tangen_basis;
+	CTangentBasis  tangent_basis;
 	glm::vec3 normal;
 	std::shared_ptr<CBxDF> bxdf;
 };

@@ -23,6 +23,8 @@ public:
   AABB(const AABB& aabb);
   ~AABB();
 
+  glm::vec3 offset_normalized(glm::vec3 p) const;
+
   /// Set the AABB as NULL (not set).
   void setNull()      {mMin = glm::vec3(1.0); mMax = glm::vec3(-1.0);}
 
