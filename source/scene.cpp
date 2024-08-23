@@ -1,6 +1,8 @@
 #include <iterator>
 #include "scene.h"
 
+static std::filesystem::path search_path;
+
 void Alpha7XSceneBuilder::Scale(float sx, float sy, float sz)
 {
 }
@@ -196,6 +198,11 @@ void Alpha7XSceneBuilder::EndOfFiles()
 	}
 }
 
+void Alpha7XSceneBuilder::SetSearchPath(const std::filesystem::path searchpath)
+{
+	search_path = searchpath;
+}
+
 CAlpa7XScene::~CAlpa7XScene()
 {
 	delete camera;
@@ -210,6 +217,12 @@ std::unique_ptr<CIntegrator> CAlpa7XScene::createIntegrator(CPerspectiveCamera* 
 	{
 		int max_depth = integrators.parameters.GetOneInt("maxdepth", 5);
 		return std::make_unique<CPathIntegrator>(max_depth, camera, sampler, ipt_scene_inter_cpt, lights);
+	}
+	else if(integrators.name == "sppm")
+	{
+		int max_depth = integrators.parameters.GetOneInt("maxdepth", 5);
+		float initial_radius = integrators.parameters.GetOneFloat("radius", 1.0);
+		return std::make_unique<CSPPMIntegrator>(max_depth, initial_radius, camera, sampler, ipt_scene_inter_cpt, lights);
 	}
 	else
 	{
@@ -230,14 +243,7 @@ void CAlpa7XScene::SetOptions(SSceneEntity ipt_filter, SSceneEntity ipt_film, SC
 	camera = new CPerspectiveCamera(ipt_camera.camera_trans_mat, fov,rgb_film);
 
 	int spp = ipt_sampler.parameters.GetOneInt("pixelsamples", 4);
-	if (ipt_sampler.name == "sobol")
-	{
-		sampler = new CSobelSampler(spp, glm::ivec2(img_sz_x, img_sz_y));
-	}
-	else
-	{
-		assert(false);
-	}
+	sampler = new CSobelSampler(spp, glm::ivec2(img_sz_x, img_sz_y));
 }
 
 CAccelerator* CAlpa7XScene::createAccelerator(std::vector<std::shared_ptr<CLight>>& lights)
@@ -263,7 +269,9 @@ CAccelerator* CAlpa7XScene::createAccelerator(std::vector<std::shared_ptr<CLight
 			}
 			else
 			{
-				assert(false);
+				float eta = scene_entity.parameters.GetOneFloat("eta", 1.0);
+				float remaproughness = scene_entity.parameters.GetOneBool("remaproughness",false);
+				new_material = new CDielectricMaterial(eta, remaproughness);
 			}
 			accelerator->scene_materials.push_back(new_material);
 			accelerator->mat_name_idx_map.insert(std::pair(named_materials[mat_idx].first, mat_idx));
@@ -300,7 +308,7 @@ CAccelerator* CAlpa7XScene::createAccelerator(std::vector<std::shared_ptr<CLight
 				if (mat_map_iter != accelerator->mat_name_idx_map.end())
 				{
 					SA7XGeometry scene_geometry;
-					scene_geometry.geometry = accelerator->createRTCGeometry(&shape_entity, shape_idx);
+					scene_geometry.geometry = accelerator->createRTCGeometry(&shape_entity, shape_idx, search_path);
 					scene_geometry.material_idx = mat_map_iter->second;
 					accelerator->scene_geometries.push_back(scene_geometry);
 				}

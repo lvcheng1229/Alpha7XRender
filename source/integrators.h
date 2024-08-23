@@ -45,7 +45,7 @@ private:
 class CSPPMIntegrator : public CIntegrator
 {
 public:
-	CSPPMIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<std::shared_ptr<CLight>> lights);
+	CSPPMIntegrator(int max_depth, float initial_radius, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<std::shared_ptr<CLight>> lights);
 	void render();
 
 private:

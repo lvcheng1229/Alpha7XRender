@@ -129,6 +129,8 @@ public:
 
 	friend void parse(pbrt::ParserTarget* scene, std::unique_ptr<pbrt::Tokenizer> t);
 
+    void SetSearchPath(const std::filesystem::path searchpath);
+
 private:
     struct SGraphicsState
     {

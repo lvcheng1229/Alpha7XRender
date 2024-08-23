@@ -1,5 +1,6 @@
 #include "geometry.h"
 #include "scene.h"
+#include "rply/rply.h"
 
 void errorFunction(void* userPtr, enum RTCError error, const char* str)
 {
@@ -46,7 +47,7 @@ SShapeInteraction CAccelerator::intersection(CRay ray)
 	embree_ray.ray.dir_x = ray.direction.x;
 	embree_ray.ray.dir_y = ray.direction.y;
 	embree_ray.ray.dir_z = ray.direction.z;
-	embree_ray.ray.tnear = 0;
+	embree_ray.ray.tnear = 1e-5;
 	embree_ray.ray.tfar = std::numeric_limits<float>::max();
 	embree_ray.ray.time = 0;
 	embree_ray.ray.mask = -1;
@@ -87,7 +88,7 @@ bool CAccelerator::traceVisibilityRay(CRay ray, float max_t)
 	visibility_ray.dir_x = ray.direction.x;
 	visibility_ray.dir_y = ray.direction.y;
 	visibility_ray.dir_z = ray.direction.z;
-	visibility_ray.tnear = 0;
+	visibility_ray.tnear = 1e-5;
 	visibility_ray.tfar = max_t - 1e-5;
 	visibility_ray.time = 0;
 	visibility_ray.mask = -1;
@@ -99,7 +100,108 @@ bool CAccelerator::traceVisibilityRay(CRay ray, float max_t)
 	return false;
 }
 
-RTCGeometry CAccelerator::createRTCGeometry(SShapeSceneEntity* shape_entity, int ID)
+void ply_error_call_back(p_ply ply, const char* message)
+{
+	printf("rply error:%s\n", message);
+}
+
+int rply_vertex_callback(p_ply_argument argument) 
+{
+	float* buffer;
+	long index, flags;
+
+	ply_get_argument_user_data(argument, (void**)&buffer, &flags);
+	ply_get_argument_element(argument, nullptr, &index);
+
+	int stride = (flags & 0x0F0) >> 4;
+	int offset = flags & 0x00F;
+
+	buffer[index * stride + offset] = (float)ply_get_argument_value(argument);
+
+	return 1;
+}
+
+int rply_face_callback(p_ply_argument argument) 
+{
+	std::vector<int>* triangle_indices;
+	long flags, length, value_index;
+
+	ply_get_argument_user_data(argument, (void**)&triangle_indices, &flags);
+	ply_get_argument_property(argument, nullptr, &length, &value_index);
+
+	if (length != 3 ) { assert(false); }
+	if (value_index < 0) { return 1; }
+	if (value_index >= 0)
+	{
+		triangle_indices->push_back((int)ply_get_argument_value(argument));
+	}
+
+	return 1;
+}
+
+RTCGeometry CAccelerator::readPLY(const std::string& file_name, int ID)
+{
+	p_ply ply = ply_open(file_name.c_str(), ply_error_call_back, 0, nullptr);
+	if (!ply) { assert(false); }
+	if (ply_read_header(ply) == 0) { assert(false); }
+
+	p_ply_element element = nullptr;
+	size_t vertex_count = 0, face_count = 0;
+
+	while ((element = ply_get_next_element(ply, element)) != nullptr) 
+	{
+		const char* name;
+		long nInstances;
+
+		ply_get_element_info(element, &name, &nInstances);
+		if (strcmp(name, "vertex") == 0) { vertex_count = nInstances; }
+		else if (strcmp(name, "face") == 0) { face_count = nInstances; }
+	}
+
+	if (vertex_count == 0 || face_count == 0) { assert(false); }
+
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec3> normals;
+	std::vector<int> triangle_indices;
+
+	positions.resize(vertex_count);
+	normals.resize(vertex_count);
+	triangle_indices.reserve(face_count * 3);
+
+	int stide = 3;
+
+	long vtx_x_elem_num = ply_set_read_cb(ply, "vertex", "x", rply_vertex_callback, positions.data(), (stide << 4) | 0);
+	long vtx_y_elem_num = ply_set_read_cb(ply, "vertex", "y", rply_vertex_callback, positions.data(), (stide << 4) | 1);
+	long vtx_z_elem_num = ply_set_read_cb(ply, "vertex", "z", rply_vertex_callback, positions.data(), (stide << 4) | 2);
+	if (vtx_x_elem_num == 0 || vtx_y_elem_num == 0 || vtx_z_elem_num == 0) { assert(false); }
+
+	//long norm_x_elem_num = ply_set_read_cb(ply, "vertex", "nx", rply_vertex_callback, normals.data(), (stide << 4) | 0);
+	//long norm_y_elem_num = ply_set_read_cb(ply, "vertex", "ny", rply_vertex_callback, normals.data(), (stide << 4) | 1);
+	//long norm_z_elem_num = ply_set_read_cb(ply, "vertex", "nz", rply_vertex_callback, normals.data(), (stide << 4) | 2);
+	//if (norm_x_elem_num == 0 || norm_y_elem_num == 0 || norm_z_elem_num == 0) { assert(false); }
+
+	long vtx_indices_num = ply_set_read_cb(ply, "face", "vertex_indices", rply_face_callback, &triangle_indices, 0);
+	if (vtx_indices_num == 0) { assert(false); }
+
+	if (ply_read(ply) == 0) { assert(false); }
+	ply_close(ply);
+
+	RTCGeometry geom = rtcNewGeometry(rt_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+	float* geo_vertices = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), positions.size());
+	//float* geo_normals = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_NORMAL, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), normals.size());
+	unsigned* geo_indices = (unsigned*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(unsigned), triangle_indices.size() / 3);
+	memcpy(geo_vertices, positions.data(), positions.size() * sizeof(glm::vec3));
+	//memcpy(geo_normals, normals.data(), normals.size() * sizeof(glm::vec3));
+	for (int idx = 0; idx < triangle_indices.size(); idx++)
+	{
+		geo_indices[idx] = unsigned(triangle_indices[idx]);
+	}
+	rtcCommitGeometry(geom);
+	rtcAttachGeometryByID(rt_scene, geom, ID);
+	return geom;
+}
+
+RTCGeometry CAccelerator::createRTCGeometry(SShapeSceneEntity* shape_entity, int ID, const std::filesystem::path& file_path)
 {
 	if (shape_entity->name == "trianglemesh")
 	{
@@ -110,10 +212,11 @@ RTCGeometry CAccelerator::createRTCGeometry(SShapeSceneEntity* shape_entity, int
 
 		RTCGeometry geom = rtcNewGeometry(rt_device, RTC_GEOMETRY_TYPE_TRIANGLE);
 		float* geo_vertices = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), positions.size());
-		float* geo_normals = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_NORMAL, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), normals.size());
-		float* geo_uvs = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT2, 2 * sizeof(float), uvs.size());
+		//float* geo_normals = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_NORMAL, 0, RTC_FORMAT_FLOAT3, 3 * sizeof(float), normals.size());
+		//float* geo_uvs = (float*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT2, 2 * sizeof(float), uvs.size());
 		unsigned* geo_indices = (unsigned*)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(unsigned), indices.size() / 3);
 		memcpy(geo_vertices, positions.data(), positions.size() * sizeof(glm::vec3));
+		//memcpy(geo_normals, normals.data(), normals.size() * sizeof(glm::vec3));
 		for (int idx = 0; idx < indices.size(); idx++)
 		{
 			geo_indices[idx] = unsigned(indices[idx]);
@@ -125,7 +228,9 @@ RTCGeometry CAccelerator::createRTCGeometry(SShapeSceneEntity* shape_entity, int
 	}
 	else if (shape_entity->name == "plymesh")
 	{
-		assert(false);
+		std::string file_name = shape_entity->parameters.GetOneString("filename", "");
+		std::filesystem::path filepath = file_path / std::filesystem::path(file_name);
+		return readPLY(filepath.string(),ID);
 	}
 	return RTCGeometry();
 }

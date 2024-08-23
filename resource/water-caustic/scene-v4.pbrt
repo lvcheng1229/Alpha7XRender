@@ -2,7 +2,7 @@ Integrator "sppm"
     "float radius" [ 0.01 ]
     "integer maxdepth" [ 9 ]
 Transform [ 1 -0 1.50996e-7 -0 -0 1 -0 -0 1.50996e-7 -0 -1 -0 -1.13687e-13 -0.990944 6.83879 1  ]
-Sampler "independent"
+Sampler "sobol"
     "integer pixelsamples" [ 200 ]
 PixelFilter "triangle"
     "float xradius" [ 1 ]

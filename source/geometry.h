@@ -2,6 +2,7 @@
 #include <embree4/rtcore.h>
 #include <map>
 #include <string>
+#include <filesystem>
 
 #include "ray.h"
 #include "material.h"
@@ -135,10 +136,12 @@ public:
 	// false = occluded
 	bool traceVisibilityRay(CRay ray, float max_t);
 
-	RTCGeometry createRTCGeometry(SShapeSceneEntity* shape_entity, int ID);
+	RTCGeometry createRTCGeometry(SShapeSceneEntity* shape_entity, int ID,const std::filesystem::path& file_path);
 	void finalizeRtSceneCreate();
 
 private:
+	RTCGeometry readPLY(const std::string& file_name, int ID);
+
 	friend class CAlpa7XScene;
 
 	RTCScene rt_scene;

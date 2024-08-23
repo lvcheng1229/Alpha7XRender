@@ -5,6 +5,10 @@
 #ifndef PBRT_PARSER_H
 #define PBRT_PARSER_H
 
+//A7x:[BEGIN]
+#include <filesystem>
+//A7x:[END]
+
 #include <functional>
 #include <map>
 #include <memory>
@@ -68,6 +72,10 @@ namespace pbrt {
         virtual void ObjectInstance(const std::string& name) = 0;
 
         virtual void EndOfFiles() = 0;
+
+		//A7x:[BEGIN]
+		virtual void SetSearchPath(const std::filesystem::path searchpath) = 0;
+		//A7x:[END]
 
 	protected:
 	};

@@ -16,7 +16,8 @@ project(AlphaX7Renderer VERSION 0.1.0)
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.h")
 file(GLOB_RECURSE HPP_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.hpp")
 file(GLOB_RECURSE SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Source" FILES ${HEADER_FILES} ${SOURCE_FILES} ${HPP_FILES})
+file(GLOB_RECURSE SOURCE_C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/source/*.c")
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Source" FILES ${HEADER_FILES} ${SOURCE_FILES} ${SOURCE_C_FILES} ${HPP_FILES})
 
 # include source directories
 include_directories(${DALPHA7X_ROOT_DIR}/source)
@@ -49,7 +50,7 @@ include_directories(${GLM_INCLUDE})
 add_definitions(-DALPHA7X_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 # executable
-add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES} ${SOURCE_C_FILES})
 
 # copy embree dll
 foreach (REQUIRED_DLL  ${PROJECT_REQUIRED_DLL})

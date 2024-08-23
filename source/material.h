@@ -27,7 +27,15 @@ private:
 class CDielectricMaterial : public CMaterial
 {
 public:
-
+	CDielectricMaterial(float eta, bool roughness_remapping)
+		:eta(eta)
+	{
+		if (roughness_remapping == false)
+		{
+			bxdf = std::make_shared<CDielectricBxDF>(eta, CTrowbridgeReitzDistribution(0, 0));
+		}
+	};
 private:
-	
+	float eta;
+	bool roughness_remapping;
 };

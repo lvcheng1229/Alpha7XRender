@@ -177,13 +177,13 @@ glm::vec3 CPathIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, 
 	}
 }
 
-CSPPMIntegrator::CSPPMIntegrator(int max_depth, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<std::shared_ptr<CLight>> lights)
+CSPPMIntegrator::CSPPMIntegrator(int max_depth, float initial_radius, CPerspectiveCamera* camera, CSampler* sampler, CAccelerator* ipt_accelerator, std::vector<std::shared_ptr<CLight>> lights)
 	: CIntegrator(ipt_accelerator)
 	, max_depth(max_depth)
+	, initial_radius(initial_radius)
 	, camera(camera)
 	, sampler_prototype(sampler)
 {
-	assert(false);//initial radius
 	light_sampler = std::make_shared<CPowerLightSampler>(lights);
 }
 
@@ -238,6 +238,7 @@ void CSPPMIntegrator::render()
 	CRGBFilm* rgb_film = camera->getFilm();
 	const glm::u32vec2 image_size = rgb_film->getImageSize();
 	const int image_area = image_size.x * image_size.y;
+	int photons_per_iteration = image_area;
 
 	std::vector<SPPMPixel>pixels(image_area);
 	for (auto& pixel : pixels)
@@ -245,11 +246,11 @@ void CSPPMIntegrator::render()
 		pixel.radius = initial_radius;
 	}
 
+	const glm::u32vec2 bound_min = glm::u32vec2(0, 0);
+	const glm::u32vec2 bound_max = image_size;
+
 	for (int iter_idx = 0; iter_idx < iteration_num; iter_idx++)
 	{
-
-		const glm::u32vec2 bound_min = glm::u32vec2(0, 0);
-		const glm::u32vec2 bound_max = image_size;
 		for (glm::uint32 pixel_x = bound_min.x; pixel_x < bound_max.x; pixel_x++)
 		{
 			for (glm::uint32 pixel_y = bound_min.y; pixel_y < bound_max.y; pixel_y++)
@@ -400,7 +401,7 @@ void CSPPMIntegrator::render()
 
 		{
 			CDigitPermutationArrayPtr permutation_array = computeRadicalInversePermutation(0);
-			int photons_per_iteration = image_area;
+			
 			for (int idx = 0; idx < photons_per_iteration; idx++)
 			{
 				uint64_t haltton_idx = iter_idx * photons_per_iteration + idx;
@@ -538,9 +539,68 @@ void CSPPMIntegrator::render()
 		}
 
 	}
+
+	{
+		for (glm::uint32 pixel_x = bound_min.x; pixel_x < bound_max.x; pixel_x++)
+		{
+			for (glm::uint32 pixel_y = bound_min.y; pixel_y < bound_max.y; pixel_y++)
+			{
+				glm::u32vec2 pix_pos = glm::u32vec2(pixel_x, pixel_y);
+				glm::ivec2 pixel_offset = pix_pos - bound_min;
+				int pixel_idx = pixel_offset.x + pixel_offset.y * (bound_max.x - bound_min.x);
+				SPPMPixel& pixel = pixels[pixel_idx];
+
+				float num_photons = float(iteration_num) * photons_per_iteration;
+				glm::vec3 L = pixel.l_d / float(iteration_num) + pixel.tau / (num_photons * glm::pi<float>() * (pixel.radius * pixel.radius));
+				rgb_film->addSample(pix_pos, L);
+			}
+		}
+
+		rgb_film->finalizeRender(1);
+		stbi_write_tga("H:/Alpha7XRender/resource/test.tga", image_size.x, image_size.y, 3, rgb_film->getFinalData());
+	}
 }
 
 glm::vec3 CSPPMIntegrator::SampleLd(const CSurfaceInterraction& sf_interaction, const CBSDF* bsdf, CSampler* sampler)
 {
-	return glm::vec3();
+	CLightSampleContext sample_ctx(sf_interaction);
+
+	float u = sampler->get1D();
+	SSampledLight sampled_light = light_sampler->Sample(u);
+	std::shared_ptr<CLight> light = sampled_light.light;
+	if (!light)
+	{
+		return glm::vec3(0, 0, 0);
+	}
+
+	glm::vec2 u_light = sampler->get2D();
+	SLightSample light_sample = light->SampleLi(sample_ctx, u_light);
+	if (light_sample.L == glm::vec3(0, 0, 0) && light_sample.pdf == 0)
+	{
+		return glm::vec3(0, 0, 0);
+	}
+
+	glm::vec3 wo = sf_interaction.wo;
+	glm::vec3 wi = light_sample.wi;
+	glm::vec3 f = bsdf->f(wo, wi) * glm::abs(glm::dot(wi, sf_interaction.norm));
+
+	bool visible = traceVisibilityRay(CRay(sf_interaction.position, wi), glm::distance(sf_interaction.position, light_sample.iteraction.position));
+	if (!visible)
+	{
+		return glm::vec3(0, 0, 0);
+	}
+
+	float p_light = sampled_light.pmf * light_sample.pdf;
+
+	// if is delta light {}
+	// else
+	{
+		float p_bsdf = bsdf->pdf(wo, wi);
+
+		// mis
+		float w_l = powerHeuristic(1, p_light, 1, p_bsdf);
+		return w_l * light_sample.L * f / p_light;
+	}
+
+	return glm::vec3(0, 0, 0);
 }

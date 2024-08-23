@@ -9,6 +9,10 @@
 #include <format>
 #include <double-conversion/double-conversion.h>
 
+//A7X:[BEGIN]
+#include <filesystem>
+//A7X:[END]
+
 namespace pbrt
 {
     ///////////////////////////////////////////////////////////////////////////
@@ -772,6 +776,15 @@ namespace pbrt
             printf("%s\n", msg);
             };
 
+         //A7X:[BEGIN]
+        std:: filesystem::path path(filename);
+        if (!std::filesystem::is_directory(path))
+        {
+            path = path.parent_path();
+        }
+        //A7X:[END]
+
+        target->SetSearchPath(path.string());
         std::unique_ptr<Tokenizer> t = Tokenizer::CreateFromFile(filename, tokError);
         parse(target, std::move(t));
         target->EndOfFiles();
